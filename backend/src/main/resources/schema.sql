@@ -155,7 +155,7 @@ VALUES (
     'admin', 
     '123456', 
     'AI Learning Assistant', 
-    'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', 
+    'https://api.dicebear.com/9.x/avataaars/svg?seed=admin', 
     'Focus on learning and continuous improvement',
     128,
     486
@@ -255,10 +255,10 @@ INSERT INTO achievements (user_id, title, description, icon, unlocked, unlocked_
 -- Initial Data: Demo Wrong Questions
 -- ============================================
 INSERT INTO wrong_questions (user_id, title, content, answer, analysis, category, difficulty, mastered, wrong_count, tags, created_at, updated_at) VALUES
-(1, 'About JVM Garbage Collection', 'What are the differences between CMS and G1?', 'CMS uses mark-sweep algorithm, G1 uses mark-compact algorithm', 'CMS focuses on pause time, G1 focuses on throughput', 'cs', 'hard', TRUE, 3, 'jvm,gc', '2026-05-20 15:00:00', '2026-05-25 15:00:00'),
-(1, 'Vue3 Reactivity System', 'What are the differences between ref and reactive?', 'ref is for primitive types, reactive is for objects; ref requires .value, reactive does not', 'Note that ref is automatically unwrapped in templates', 'frontend', 'medium', FALSE, 2, 'vue3,reactivity', '2026-05-22 10:30:00', '2026-05-22 10:30:00'),
-(1, 'JavaScript Prototype', 'Explain how prototype chain works', 'Every object has __proto__ pointing to its prototype object, forming a prototype chain', 'prototype is a property of constructor functions, __proto__ is a property of objects', 'frontend', 'hard', FALSE, 4, 'js,prototype', '2026-05-23 14:20:00', '2026-05-23 14:20:00'),
-(1, 'SQL Join Query', 'Differences between inner join and outer join?', 'Inner join returns only matching rows, outer join returns non-matching rows as well', 'Left outer join preserves all rows from left table, right outer join preserves all from right', 'cs', 'medium', FALSE, 2, 'sql,join', '2026-05-24 11:00:00', '2026-05-24 11:00:00');
+(1, 'About JVM Garbage Collection', 'What are the differences between CMS and G1?', 'CMS uses mark-sweep algorithm, G1 uses mark-compact algorithm', 'CMS focuses on pause time, G1 focuses on throughput', 'cs', '困难', TRUE, 3, 'jvm,gc', '2026-05-20 15:00:00', '2026-05-25 15:00:00'),
+(1, 'Vue3 Reactivity System', 'What are the differences between ref and reactive?', 'ref is for primitive types, reactive is for objects; ref requires .value, reactive does not', 'Note that ref is automatically unwrapped in templates', 'frontend', '中等', FALSE, 2, 'vue3,reactivity', '2026-05-22 10:30:00', '2026-05-22 10:30:00'),
+(1, 'JavaScript Prototype', 'Explain how prototype chain works', 'Every object has __proto__ pointing to its prototype object, forming a prototype chain', 'prototype is a property of constructor functions, __proto__ is a property of objects', 'frontend', '困难', FALSE, 4, 'js,prototype', '2026-05-23 14:20:00', '2026-05-23 14:20:00'),
+(1, 'SQL Join Query', 'Differences between inner join and outer join?', 'Inner join returns only matching rows, outer join returns non-matching rows as well', 'Left outer join preserves all rows from left table, right outer join preserves all from right', 'cs', '中等', FALSE, 2, 'sql,join', '2026-05-24 11:00:00', '2026-05-24 11:00:00');
 
 -- ============================================
 -- Create indexes for better performance

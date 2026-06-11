@@ -37,6 +37,6 @@ public class AchievementController {
     @PostMapping("/init")
     public ApiResponse<Void> init(@RequestParam(defaultValue = "false") boolean reset) {
         achievementService.initAchievements(AuthContext.getCurrentUserId(), reset);
-        return ApiResponse.success("初始化成�?, null);
+        return ApiResponse.success("初始化成功", null);
     }
 }

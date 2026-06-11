@@ -17,7 +17,7 @@
     <description>Spring Boot backend for AI learning assistant</description>
 
     <properties>
-        <java.version>11</java.version>
+        <java.version>17</java.version>
         <langchain4j.version>0.36.2</langchain4j.version>
     </properties>
 

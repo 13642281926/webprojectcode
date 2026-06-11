@@ -113,7 +113,7 @@ async function handleLogout() {
           <div class="note-item__content">{{ note.content }}</div>
           <div class="note-item__footer">
             <span class="note-item__time">{{ note.time }}</span>
-            <el-button type="danger" link :icon="Delete" @click="noteStore.deleteNote(note.id)">删除</el-button>
+            <el-button type="danger" link :icon="Delete" @click="noteStore.removeNote(note.id)">删除</el-button>
           </div>
         </div>
       </div>

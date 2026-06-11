@@ -48,7 +48,11 @@ function onKeydown(e) {
 }
 
 function saveAsNote(content) {
-  noteStore.addNote(content)
+  noteStore.addNote({
+    title: content.slice(0, 50),
+    content: content,
+    category: 'AI问答',
+  })
   ElMessage.success('已保存到我的笔记')
 }
 </script>

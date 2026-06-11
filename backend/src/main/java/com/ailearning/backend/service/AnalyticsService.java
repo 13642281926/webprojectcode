@@ -37,7 +37,8 @@ public class AnalyticsService {
 
         int averageCourseProgress = (int) courses.stream().mapToInt(Course::getProgress).average().orElse(0);
 
-        // �?6 月学习时长（按当前月倒推�?        DateTimeFormatter ymFmt = DateTimeFormatter.ofPattern("yyyy-MM");
+        // 过去6个月学习时长（按当前月倒推）
+        DateTimeFormatter ymFmt = DateTimeFormatter.ofPattern("yyyy-MM");
         YearMonth currentMonth = YearMonth.now();
         List<String> monthLabels = new ArrayList<>();
         List<Integer> monthValues = new ArrayList<>();
@@ -72,7 +73,8 @@ public class AnalyticsService {
         Map<String, Object> courseProgress = new HashMap<>();
         courseProgress.put("list", progressList);
 
-        // 学习热力图：过去 12 周（按天�?        List<Object[]> heatmap = new ArrayList<>();
+        // 学习热力图：过去12周（按天）
+        List<Object[]> heatmap = new ArrayList<>();
         LocalDate today = LocalDate.now();
         for (int i = 12 * 7 - 1; i >= 0; i--) {
             LocalDate d = today.minusDays(i);

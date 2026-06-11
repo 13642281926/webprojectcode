@@ -124,7 +124,7 @@ public class RagService {
         promptBuilder.append("请基于以下参考资料回答用户的问题：\n\n");
         
         for (int i = 0; i < relevantContents.size(); i++) {
-            promptBuilder.append(String.format("参考资�?%d:\n%s\n\n", i + 1, relevantContents.get(i)));
+            promptBuilder.append(String.format("参考资料%d:\n%s\n\n", i + 1, relevantContents.get(i)));
         }
         
         promptBuilder.append("用户问题: ").append(userQuery);

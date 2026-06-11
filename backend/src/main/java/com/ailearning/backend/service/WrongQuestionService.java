@@ -82,7 +82,7 @@ public class WrongQuestionService {
     public WrongQuestion detail(Long userId, Long id) {
         return wrongQuestionRepository.findById(id)
                 .filter(q -> q.getUserId().equals(userId))
-                .orElseThrow(() -> new ApiException(404, "题目不存�?));
+                .orElseThrow(() -> new ApiException(404, "题目不存在"));
     }
 
     @Transactional
@@ -137,7 +137,7 @@ public class WrongQuestionService {
                 Map.of("id", "all", "name", "全部"),
                 Map.of("id", "math", "name", "数学"),
                 Map.of("id", "english", "name", "英语"),
-                Map.of("id", "cs", "name", "专业�?)
+                Map.of("id", "cs", "name", "专业课")
         );
     }
 

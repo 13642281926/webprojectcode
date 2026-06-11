@@ -147,7 +147,6 @@ import {
 import { useResourceStore } from '@/stores/resource'
 import { debounce } from 'lodash-es'
 import { downloadResourceApi } from '@/api/resource'
-import request from '@/api/request'
 
 const resourceStore = useResourceStore()
 
@@ -239,11 +238,9 @@ const handleOpen = (resource) => {
 
 const handleDownload = async (resource) => {
   try {
-    const res = await request.get(`/api/resource/download/${resource.id}`, {
-      responseType: 'blob'
-    })
-    
-    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const res = await downloadResourceApi(resource.id)
+
+    const url = window.URL.createObjectURL(res)
     const link = document.createElement('a')
     link.href = url
     

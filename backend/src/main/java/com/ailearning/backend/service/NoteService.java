@@ -37,7 +37,7 @@ public class NoteService {
     public Note detail(Long userId, Long id) {
         return noteRepository.findById(id)
                 .filter(note -> note.getUserId().equals(userId))
-                .orElseThrow(() -> new ApiException(404, "笔记不存�?));
+                .orElseThrow(() -> new ApiException(404, "笔记不存在"));
     }
 
     @Transactional

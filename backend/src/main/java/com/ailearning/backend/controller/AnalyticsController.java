@@ -36,13 +36,13 @@ public class AnalyticsController {
         return ApiResponse.success(analyticsService.overview(AuthContext.getCurrentUserId()));
     }
 
-    /** 首页 / 数据分析 共用的核心面板数据（�?DashboardService 一致） */
+    /** 首页 / 数据分析 共用的核心面板数据（与DashboardService 一致） */
     @GetMapping("/dashboard")
     public ApiResponse<Map<String, Object>> dashboard(@RequestParam(required = false) String range) {
         return ApiResponse.success(dashboardService.stats(AuthContext.getCurrentUserId()));
     }
 
-    /** 任务完成分布（前�?AnalyticsView 用） */
+    /** 任务完成分布（前端AnalyticsView 用） */
     @GetMapping("/tasks")
     public ApiResponse<Map<String, Object>> tasks(@RequestParam(required = false) String range) {
         Long userId = AuthContext.getCurrentUserId();

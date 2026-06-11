@@ -31,6 +31,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleException(Exception exception) {
-        return ApiResponse.fail(500, exception.getMessage() == null ? "服务器异�? : exception.getMessage());
+        return ApiResponse.fail(500, exception.getMessage() == null ? "服务器异常" : exception.getMessage());
     }
 }

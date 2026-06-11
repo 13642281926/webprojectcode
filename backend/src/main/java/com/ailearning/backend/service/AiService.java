@@ -4,8 +4,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
-import reactor.core.publisher.Mono;
+import io.netty.handler.timeout.ReadTimeoutHandler;
+import io.netty.handler.timeout.WriteTimeoutHandler;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,8 +30,14 @@ public class AiService {
     private String systemPrompt;
 
     public AiService(@Value("${app.deepseek.base-url}") String baseUrl, RagService ragService) {
+        HttpClient httpClient = HttpClient.create()
+                .responseTimeout(Duration.ofSeconds(60))
+                .doOnConnected(conn ->
+                    conn.addHandlerLast(new ReadTimeoutHandler(60))
+                        .addHandlerLast(new WriteTimeoutHandler(60)));
         this.webClient = WebClient.builder()
                 .baseUrl(baseUrl)
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .build();
         this.ragService = ragService;
     }
@@ -44,7 +54,7 @@ public class AiService {
             Map<String, Object> requestBody = Map.of(
                     "model", model,
                     "messages", List.of(
-                            Map.of("role", "system", "content", systemPrompt + "\n\n如果用户问题有相关参考资料，请优先基于参考资料回答�?),
+                            Map.of("role", "system", "content", systemPrompt + "\n\n如果用户问题有相关参考资料，请优先基于参考资料回答。"),
                             Map.of("role", "user", "content", enhancedPrompt)
                     ),
                     "thinking", Map.of("type", "enabled"),
@@ -69,10 +79,10 @@ public class AiService {
                     Map<?, ?> message = (Map<?, ?>) choice.get("message");
                     content = (String) message.get("content");
                 } else {
-                    content = "抱歉，我暂时无法回答你的问题，请稍后重试�?;
+                    content = "抱歉，我暂时无法回答你的问题，请稍后重试。";
                 }
             } else {
-                content = "抱歉，我暂时无法回答你的问题，请稍后重试�?;
+                content = "抱歉，我暂时无法回答你的问题，请稍后重试。";
             }
 
             Map<String, Object> data = new LinkedHashMap<>();
@@ -87,7 +97,7 @@ public class AiService {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("id", "msg_" + System.currentTimeMillis());
             data.put("role", "assistant");
-            data.put("content", "抱歉，调用AI服务失败，请检查API密钥配置或稍后重试�?);
+            data.put("content", "抱歉，调用AI服务失败，请检查API密钥配置或稍后重试。");
             data.put("createdAt", LocalDateTime.now());
             return data;
         } catch (Exception e) {
@@ -95,7 +105,7 @@ public class AiService {
             Map<String, Object> data = new LinkedHashMap<>();
             data.put("id", "msg_" + System.currentTimeMillis());
             data.put("role", "assistant");
-            data.put("content", "抱歉，系统出现错误，请稍后重试�?);
+            data.put("content", "抱歉，系统出现错误，请稍后重试。");
             data.put("createdAt", LocalDateTime.now());
             return data;
         }
@@ -103,8 +113,8 @@ public class AiService {
 
     public List<String> quickQuestions() {
         return List.of(
-                "如何准备考研�?,
-                "怎样提高英语学习效率�?,
+                "如何准备考研，",
+                "怎样提高英语学习效率，",
                 "Vue3 项目学习路线是什么？",
                 "如何做时间管理？",
                 "算法刷题有什么建议？"

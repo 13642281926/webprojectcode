@@ -4,7 +4,7 @@ import CourseCard from '@/components/common/CourseCard.vue'
 import LazyImage from '@/components/common/LazyImage.vue'
 import { getCourseListApi, getCourseDetailApi } from '@/api/course'
 import { debounce } from '@/utils/debounce'
-import { Search, BookOpen, Medal } from '@element-plus/icons-vue'
+import { Search, Collection, Medal } from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const courses = ref([])
@@ -63,7 +63,7 @@ async function openDetail(course) {
     <div class="page-hero">
       <div class="page-hero__content">
         <div class="page-badge">
-          <el-icon :size="16"><BookOpen /></el-icon>
+          <el-icon :size="16"><Collection /></el-icon>
           <span>课程中心</span>
         </div>
         <h1 class="page-title gradient-text">探索优质课程</h1>
@@ -126,8 +126,8 @@ async function openDetail(course) {
           <p class="course-detail__meta">
             讲师：{{ courseDetail.teacher }} · {{ courseDetail.lessons }} 课时
           </p>
-          <div v-if="courseDetail.knowledgePoints?.length" class="course-detail__tags">
-            <el-tag v-for="kp in courseDetail.knowledgePoints" :key="kp" size="default" effect="plain" type="info">
+          <div v-if="courseDetail.knowledgePoints?.filter(Boolean).length" class="course-detail__tags">
+            <el-tag v-for="kp in courseDetail.knowledgePoints.filter(Boolean)" :key="kp" size="default" effect="plain" type="info">
               {{ kp }}
             </el-tag>
           </div>
@@ -135,13 +135,13 @@ async function openDetail(course) {
             <span class="progress-label">学习进度</span>
             <span class="progress-value">{{ courseDetail.progress }}%</span>
           </div>
-          <el-progress 
-            :percentage="courseDetail.progress" 
+          <el-progress
+            :percentage="courseDetail.progress"
             :stroke-width="12"
-            :color="{
-              '0%': '#3b82f6',
-              '100%': '#22c55e'
-            }"
+            :color="[
+              { color: '#3b82f6', percentage: 0 },
+              { color: '#22c55e', percentage: 100 }
+            ]"
           />
           <el-divider content-position="left">
             <span class="divider-title">章节列表</span>
@@ -159,7 +159,7 @@ async function openDetail(course) {
           <div class="chapters-container">
             <el-timeline>
               <el-timeline-item
-                v-for="ch in courseDetail.chapters"
+                v-for="ch in courseDetail.chapters.filter(Boolean)"
                 :key="ch.id"
                 :type="ch.done ? 'success' : 'primary'"
                 :size="'large'"

@@ -58,14 +58,14 @@ public class AuthService {
 
     private String extractBearerToken(String header) {
         if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
-            throw new ApiException(401, "未登录或登录已过�?);
+            throw new ApiException(401, "未登录或登录已过期");
         }
         return header.substring(7);
     }
 
     private Claims parseClaims(String token) {
         if (revokedTokens.containsKey(token)) {
-            throw new ApiException(401, "登录已失效，请重新登�?);
+            throw new ApiException(401, "登录已失效，请重新登录");
         }
         try {
             return Jwts.parser()
@@ -74,7 +74,7 @@ public class AuthService {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (Exception e) {
-            throw new ApiException(401, "登录已失效，请重新登�?);
+            throw new ApiException(401, "登录已失效，请重新登录");
         }
     }
 

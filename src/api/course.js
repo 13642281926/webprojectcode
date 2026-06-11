@@ -5,5 +5,5 @@ export function getCourseListApi(params) {
 }
 
 export function getCourseDetailApi(id) {
-  return request.get(`/course/${id}`)
+  return request.get(`/course/${id}`, { showLoading: false })
 }

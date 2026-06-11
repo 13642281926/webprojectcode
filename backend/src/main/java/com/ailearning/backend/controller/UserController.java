@@ -36,7 +36,7 @@ public class UserController {
     @PostMapping("/logout")
     public ApiResponse<Void> logout(@RequestHeader("Authorization") String authorization) {
         authService.invalidateToken(authorization);
-        return ApiResponse.success("退出成�?, null);
+        return ApiResponse.success("退出成功", null);
     }
 
     @GetMapping("/profile")

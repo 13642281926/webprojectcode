@@ -32,7 +32,7 @@ public class CourseService {
         data.put("list", filtered);
         data.put("categories", List.of(
                 categoryItem("all", "全部"),
-                categoryItem("frontend", "前端开�?),
+                categoryItem("frontend", "前端开发"),
                 categoryItem("cs", "计算机基础"),
                 categoryItem("language", "语言学习")
         ));
@@ -42,7 +42,7 @@ public class CourseService {
     @Transactional(readOnly = true)
     public Course detail(String id) {
         return courseRepository.findById(id)
-                .orElseThrow(() -> new ApiException(404, "课程不存�?));
+                .orElseThrow(() -> new ApiException(404, "课程不存在"));
     }
 
     @Transactional(readOnly = true)

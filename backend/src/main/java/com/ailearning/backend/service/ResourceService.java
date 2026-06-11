@@ -75,7 +75,7 @@ public class ResourceService {
     public Resource detail(Long userId, Long id) {
         return resourceRepository.findById(id)
                 .filter(res -> res.getUserId().equals(userId))
-                .orElseThrow(() -> new ApiException(404, "资源不存�?));
+                .orElseThrow(() -> new ApiException(404, "资源不存在"));
     }
 
     @Transactional
@@ -176,7 +176,7 @@ public class ResourceService {
     public List<Map<String, String>> categories() {
         return List.of(
                 Map.of("id", "all", "name", "全部"),
-                Map.of("id", "book", "name", "电子�?),
+                Map.of("id", "book", "name", "电子书"),
                 Map.of("id", "code", "name", "代码示例"),
                 Map.of("id", "paper", "name", "试卷真题")
         );
@@ -193,7 +193,7 @@ public class ResourceService {
         List<Map<String, Object>> categoryDistribution = byCategory.entrySet().stream()
                 .map(e -> {
                     Map<String, Object> item = new HashMap<>();
-                    item.put("name", e.getKey() == null || e.getKey().isEmpty() ? "未分�? : e.getKey());
+                    item.put("name", e.getKey() == null || e.getKey().isEmpty() ? "未分类" : e.getKey());
                     item.put("value", e.getValue());
                     return item;
                 })

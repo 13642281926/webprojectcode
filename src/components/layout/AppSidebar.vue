@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import {
   Odometer,
   Calendar,
+  AlarmClock,
   Reading,
   ChatDotRound,
   DataAnalysis,
@@ -22,6 +23,7 @@ const themeStore = useThemeStore()
 const iconMap = {
   Odometer,
   Calendar,
+  AlarmClock,
   Reading,
   ChatDotRound,
   DataAnalysis,

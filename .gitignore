@@ -21,6 +21,7 @@ backend/mvnw.cmd
 
 # Uploads
 uploads/
+backend/data/
 
 # IDE and editor
 .vscode/*
