@@ -26,6 +26,9 @@ public class User {
     @Column(length = 255)
     private String signature;
 
+    @Column(nullable = false, length = 20)
+    private String role = "user";
+
     @Column(nullable = false)
     private Integer studyDays;
 

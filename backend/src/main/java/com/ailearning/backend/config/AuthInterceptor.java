@@ -24,8 +24,11 @@ public class AuthInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         try {
-            Long userId = authService.requireUserId(request.getHeader("Authorization"));
+            String header = request.getHeader("Authorization");
+            Long userId = authService.requireUserId(header);
+            String role = authService.extractRole(header);
             AuthContext.setCurrentUserId(userId);
+            AuthContext.setCurrentUserRole(role);
             return true;
         } catch (ApiException exception) {
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

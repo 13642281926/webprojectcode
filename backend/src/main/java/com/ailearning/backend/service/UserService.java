@@ -55,6 +55,7 @@ public class UserService {
                 ? request.getNickname()
                 : request.getUsername());
         user.setAvatar("https://api.dicebear.com/9.x/avataaars/svg?seed=" + request.getUsername());
+        user.setRole("user");
         user.setSignature("专注学习，持续成长");
         user.setStudyDays(0);
         user.setTotalHours(0);
@@ -98,6 +99,7 @@ public class UserService {
         profile.put("signature", user.getSignature());
         profile.put("studyDays", user.getStudyDays());
         profile.put("totalHours", user.getTotalHours());
+        profile.put("role", user.getRole() != null ? user.getRole() : "user");
         return profile;
     }
 }

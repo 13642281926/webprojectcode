@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
     nickname VARCHAR(50) NOT NULL,
     avatar VARCHAR(255),
     signature VARCHAR(255),
+    role VARCHAR(20) NOT NULL DEFAULT 'user',
     study_days INT NOT NULL DEFAULT 0,
     total_hours INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -150,12 +151,13 @@ CREATE TABLE IF NOT EXISTS wrong_questions (
 -- ============================================
 -- Initial Data: Create a demo user
 -- ============================================
-INSERT INTO users (username, password, nickname, avatar, signature, study_days, total_hours) 
+INSERT INTO users (username, password, nickname, avatar, signature, role, study_days, total_hours)
 VALUES (
-    'admin', 
+    'admin',
     '123456', 
     'AI Learning Assistant', 
-    'https://api.dicebear.com/9.x/avataaars/svg?seed=admin', 
+    'https://api.dicebear.com/9.x/avataaars/svg?seed=admin',
+    'admin',
     'Focus on learning and continuous improvement',
     128,
     486

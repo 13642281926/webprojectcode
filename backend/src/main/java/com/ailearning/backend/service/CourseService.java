@@ -52,6 +52,44 @@ public class CourseService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public Course create(Map<String, Object> body) {
+        Course course = new Course();
+        course.setId((String) body.get("id"));
+        course.setTitle((String) body.get("title"));
+        course.setCategory((String) body.get("category"));
+        course.setCover((String) body.get("cover"));
+        course.setDescription((String) body.get("description"));
+        course.setTeacher((String) body.get("teacher"));
+        course.setLessons(body.get("lessons") instanceof Integer
+                ? (Integer) body.get("lessons")
+                : Integer.parseInt(String.valueOf(body.get("lessons"))));
+        course.setProgress(0);
+        return courseRepository.save(course);
+    }
+
+    @Transactional
+    public Course update(String id, Map<String, Object> body) {
+        Course course = detail(id);
+        if (body.containsKey("title")) course.setTitle((String) body.get("title"));
+        if (body.containsKey("category")) course.setCategory((String) body.get("category"));
+        if (body.containsKey("cover")) course.setCover((String) body.get("cover"));
+        if (body.containsKey("description")) course.setDescription((String) body.get("description"));
+        if (body.containsKey("teacher")) course.setTeacher((String) body.get("teacher"));
+        if (body.containsKey("lessons")) {
+            course.setLessons(body.get("lessons") instanceof Integer
+                    ? (Integer) body.get("lessons")
+                    : Integer.parseInt(String.valueOf(body.get("lessons"))));
+        }
+        return courseRepository.save(course);
+    }
+
+    @Transactional
+    public void delete(String id) {
+        Course course = detail(id);
+        courseRepository.delete(course);
+    }
+
     private boolean matchesKeyword(Course course, String keyword) {
         if (!StringUtils.hasText(keyword)) {
             return true;

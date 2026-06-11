@@ -1,10 +1,15 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import CourseCard from '@/components/common/CourseCard.vue'
 import LazyImage from '@/components/common/LazyImage.vue'
-import { getCourseListApi, getCourseDetailApi } from '@/api/course'
+import { getCourseListApi, getCourseDetailApi, createCourseApi, updateCourseApi, deleteCourseApi } from '@/api/course'
+import { useUserStore } from '@/stores/user'
 import { debounce } from '@/utils/debounce'
-import { Search, Collection, Medal } from '@element-plus/icons-vue'
+import { Search, Collection, Medal, Plus, Edit, Delete } from '@element-plus/icons-vue'
+
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.isAdmin)
 
 const loading = ref(false)
 const courses = ref([])
@@ -15,6 +20,96 @@ const keyword = ref('')
 const drawerVisible = ref(false)
 const detailLoading = ref(false)
 const courseDetail = ref(null)
+
+// Admin: course form dialog
+const dialogVisible = ref(false)
+const dialogTitle = ref('添加课程')
+const isEditing = ref(false)
+const editingId = ref('')
+const saving = ref(false)
+const formData = reactive({
+  id: '',
+  title: '',
+  category: 'frontend',
+  cover: '',
+  description: '',
+  teacher: '',
+  lessons: 0,
+})
+
+const categoryOptions = [
+  { value: 'frontend', label: '前端开发' },
+  { value: 'cs', label: '计算机基础' },
+  { value: 'language', label: '语言学习' },
+]
+
+function resetForm() {
+  formData.id = ''
+  formData.title = ''
+  formData.category = 'frontend'
+  formData.cover = ''
+  formData.description = ''
+  formData.teacher = ''
+  formData.lessons = 0
+}
+
+function openCreateDialog() {
+  resetForm()
+  isEditing.value = false
+  dialogTitle.value = '添加课程'
+  dialogVisible.value = true
+}
+
+function openEditDialog(course) {
+  isEditing.value = true
+  editingId.value = course.id
+  dialogTitle.value = '编辑课程'
+  formData.id = course.id
+  formData.title = course.title
+  formData.category = course.category
+  formData.cover = course.cover || ''
+  formData.description = course.description || ''
+  formData.teacher = course.teacher || ''
+  formData.lessons = course.lessons || 0
+  dialogVisible.value = true
+}
+
+async function handleSave() {
+  saving.value = true
+  try {
+    const data = { ...formData }
+    if (isEditing.value) {
+      await updateCourseApi(editingId.value, data)
+      ElMessage.success('课程更新成功')
+    } else {
+      await createCourseApi(data)
+      ElMessage.success('课程创建成功')
+    }
+    dialogVisible.value = false
+    await fetchList()
+  } catch (e) {
+    ElMessage.error(e?.response?.data?.message || e?.message || '操作失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+async function handleDelete(course) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除课程「${course.title}」吗？此操作不可恢复。`,
+      '删除确认',
+      { confirmButtonText: '确定删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    await deleteCourseApi(course.id)
+    ElMessage.success('课程已删除')
+    await fetchList()
+  } catch (e) {
+    if (e !== 'cancel') {
+      ElMessage.error(e?.response?.data?.message || e?.message || '删除失败')
+    }
+  }
+}
 
 async function fetchList() {
   loading.value = true
@@ -73,6 +168,9 @@ async function openDetail(course) {
             <el-icon><Medal /></el-icon>
             {{ courses.length }} 门课程
           </el-tag>
+          <el-button v-if="isAdmin" type="primary" :icon="Plus" @click="openCreateDialog">
+            添加课程
+          </el-button>
         </div>
       </div>
     </div>
@@ -101,13 +199,17 @@ async function openDetail(course) {
 
     <!-- 课程卡片网格 -->
     <div v-loading="loading" class="content-grid">
-      <CourseCard 
-        v-for="course in courses" 
-        :key="course.id" 
-        :course="course" 
-        class="course-page__card" 
-        @click="openDetail(course)" 
-      />
+      <div v-for="course in courses" :key="course.id" class="course-card-wrapper">
+        <CourseCard
+          :course="course"
+          class="course-page__card"
+          @click="openDetail(course)"
+        />
+        <div v-if="isAdmin" class="course-card-admin">
+          <el-button size="small" type="primary" :icon="Edit" circle @click.stop="openEditDialog(course)" />
+          <el-button size="small" type="danger" :icon="Delete" circle @click.stop="handleDelete(course)" />
+        </div>
+      </div>
     </div>
     <el-empty v-if="!loading && !courses.length" description="暂无课程" class="empty-state" />
 
@@ -174,6 +276,41 @@ async function openDetail(course) {
         </template>
       </div>
     </el-drawer>
+
+    <!-- 管理员：添加/编辑课程对话框 -->
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close>
+      <el-form :model="formData" label-position="top">
+        <el-form-item label="课程ID" required>
+          <el-input v-model="formData.id" placeholder="如 course-001" :disabled="isEditing" />
+        </el-form-item>
+        <el-form-item label="课程标题" required>
+          <el-input v-model="formData.title" placeholder="请输入课程标题" />
+        </el-form-item>
+        <el-form-item label="课程类别" required>
+          <el-select v-model="formData.category" style="width: 100%">
+            <el-option v-for="opt in categoryOptions" :key="opt.value" :label="opt.label" :value="opt.value" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="封面URL">
+          <el-input v-model="formData.cover" placeholder="https://..." />
+        </el-form-item>
+        <el-form-item label="课程描述" required>
+          <el-input v-model="formData.description" type="textarea" :rows="3" placeholder="请输入课程描述" />
+        </el-form-item>
+        <el-form-item label="讲师" required>
+          <el-input v-model="formData.teacher" placeholder="请输入讲师姓名" />
+        </el-form-item>
+        <el-form-item label="课时数" required>
+          <el-input-number v-model="formData.lessons" :min="1" :max="200" style="width: 100%" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saving" @click="handleSave">
+          {{ isEditing ? '保存修改' : '创建课程' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -202,6 +339,25 @@ async function openDetail(course) {
 
 .course-page__card {
   width: 100%;
+}
+
+.course-card-wrapper {
+  position: relative;
+
+  .course-card-admin {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  &:hover .course-card-admin {
+    opacity: 1;
+  }
 }
 
 .empty-state {

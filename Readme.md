@@ -1,486 +1,276 @@
-# AI 学习成长助手平台（AI Learning Assistant Platform）
+# AI 学习成长助手平台（AI Learning Growth Studio）
+
+基于 **Vue 3 + Spring Boot + MySQL 8.0** 的全栈学习助手平台，集成 DeepSeek AI 对话、RAG 知识增强、数据分析、课程管理、角色权限等功能。
+
+---
 
 ## 快速开始
 
+### 环境要求
+
+| 依赖 | 版本 |
+|------|------|
+| Node.js | >= 20.19 |
+| Java | 17 (JDK) |
+| Maven | >= 3.6 |
+| MySQL | 8.0 |
+
+### 启动前端
+
 ```bash
-# 安装依赖
 npm install
-
-# 启动开发服务器（默认 http://localhost:5173）
-npm run dev
-
-# 生产构建
-npm run build
-
-# 预览构建结果
-npm run preview
+npm run dev        # http://localhost:5173
 ```
+
+### 启动后端
+
+```bash
+# 1. 确保 MySQL 8.0 已启动
+# 2. 修改 backend/src/main/resources/application.yml 中的数据库密码
+# 3. 启动后端
+cd backend
+mvn spring-boot:run   # http://localhost:8080
+```
+
+首次启动会自动建库建表，并执行 `schema.sql` 导入演示数据。
+
+### 数据库配置
+
+| 配置项 | 默认值 |
+|--------|--------|
+| 地址 | `localhost:3307` |
+| 数据库 | `ai_learning` |
+| 用户 | `root` |
+| 密码 | `123456` |
+
+可在 `backend/src/main/resources/application.yml` 中修改。
 
 ### 演示账号
 
-| 字段 | 值 |
-|------|-----|
-| 账号 | `admin` |
-| 密码 | `123456` |
+| 用户名 | 密码 | 角色 |
+|--------|------|------|
+| `admin` | `123456` | **管理员**（可管理课程） |
 
-登录后可访问 Dashboard、个人中心等需鉴权页面；未登录访问系统页会自动跳转 `/login`。
+> 新注册用户默认为普通用户，无法进行课程增删改操作。
 
-### 环境要求
+---
 
-- Node.js >= 20.19 (推荐 v24 LTS)
-- npm >= 10
-
-### 常见问题
+## 常见问题
 
 | 问题 | 处理方式 |
 |------|----------|
 | 端口 5173 被占用 | 修改 `vite.config.js` 中 `server.port` |
-| Mock 接口无响应 | 请使用 `npm run dev`（仅开发环境启用 Mock） |
+| 端口 8080 被占用 | 修改 `application.yml` 中 `server.port` 或关闭旧进程 |
+| 数据库连接失败 | 确认 MySQL 已启动，检查 `application.yml` 中密码和端口 |
 | 登录后刷新退出 | 检查浏览器是否禁用 localStorage |
-| 图表不显示 | 确认已登录且 Mock 服务正常，查看控制台网络请求 |
-
-### 答辩演示路线（约 5 分钟）
-
-1. **登录** → `admin` / `123456`，展示粒子背景与表单校验  
-2. **Dashboard** → 统计卡片、折线/柱状图、快捷入口跳转  
-3. **学习计划** → 新增一条计划 → 切换状态 → 删除  
-4. **课程管理** → 分类筛选 + 搜索防抖 → 打开详情抽屉  
-5. **AI 助手** → 输入「考研」或点快捷问题 → 展示 Mock 回复  
-6. **数据分析** → 多图表联动动画  
-7. **个人中心** → 修改昵称保存 → 退出登录  
-8. **守卫验证** → 直接访问 `/dashboard` 未登录会跳转登录页  
-
-组件化说明详见 [`docs/COMPONENTS.md`](docs/COMPONENTS.md)。
-
----
-
-## 项目进度
-
-| 阶段 | 内容 | 状态 |
-|------|------|------|
-| **阶段一** | Vite 工程初始化、依赖安装、目录骨架 | ✅ 已完成 |
-| **阶段二** | 基础设施：主题/布局/粒子、Pinia、Axios、Mock、AppLayout | ✅ 已完成 |
-| **阶段三** | 认证与业务页面：Dashboard、计划、课程、AI、分析、个人中心 | ✅ 已完成 |
-| **阶段五** | 打磨与考核：组件化复查、性能、动效、联调、文档 | ✅ 已完成 |
-| **阶段六** | Lighthouse 优化：ECharts 按需引入、无障碍、SEO、gzip 压缩 | ✅ 已完成 |
-| **阶段七** | UI/UX 重构：浅色模式、靛蓝色彩体系、热力图、看板视图、知识点 | ✅ 已完成 |
-
----
-
-## 技术栈
-
-### 必选（已集成）
-
-| 技术 | 版本策略 | 用途 |
-|------|----------|------|
-| Vue 3 | Composition API | 核心框架 |
-| Vite | 最新稳定版 | 构建与开发服务器 |
-| Vue Router | 5.x | 路由、懒加载、导航守卫 |
-| Pinia | 3.x | 用户 / 计划 / 主题状态 |
-| Axios | 1.x | HTTP 请求封装 |
-| Element Plus | 2.x | UI 组件库 |
-| ECharts | 6.x | Dashboard / 数据分析页图表 |
-| MockJS | 1.x | 模拟随机数据 |
-| vite-plugin-mock | 3.x | 开发环境 Mock 接口 |
-| Sass | - | 全局样式与变量 |
-
-### 工程化插件
-
-- **unplugin-auto-import**：自动导入 Vue / Router / Pinia API
-- **unplugin-vue-components** + **ElementPlusResolver**：Element Plus **按需引入**组件
-- **vite-plugin-compression**：构建时生成 `.gz` / `.br` 预压缩文件，配合 Nginx 静态压缩
-- **路径别名**：`@` → `src/`
-
-### 可选（后续按需）
-
-- Lodash
-- 动画库（Motion / Animate.css）
+| AI 问答超时 | DeepSeek 推理较慢，已设置 60s 超时 |
 
 ---
 
 ## 项目结构
 
 ```
-project_code/
-├── public/
-├── src/
-│   ├── api/
-│   │   ├── request.js       # Axios 封装（Loading / 401 / 错误提示）
-│   │   ├── user.js
-│   │   ├── dashboard.js
-│   │   ├── studyPlan.js
-│   │   ├── course.js
-│   │   ├── ai.js
-│   │   └── analytics.js
+zprojectcode/
+├── src/                           # Vue 3 前端
+│   ├── api/                       # Axios 接口封装
 │   ├── components/
-│   │   ├── common/
-│   │   │   ├── ParticleBackground.vue   # 粒子背景
-│   │   │   ├── StatCard.vue             # 统计卡片
-│   │   │   ├── ChartCard.vue            # ECharts 图表卡片
-│   │   │   ├── QuickEntry.vue           # 快捷入口
-│   │   │   ├── CourseCard.vue           # 课程卡片
-│   │   │   ├── AIChatBox.vue            # AI 聊天框
-│   │   │   └── LazyImage.vue            # 图片懒加载
-├── docs/
-│   └── COMPONENTS.md        # 组件 props/emit/slot 说明（答辩用）
-│   │   └── layout/
-│   │       ├── AppLayout.vue            # 主布局（router-view）
-│   │       ├── AppHeader.vue
-│   │       └── AppSidebar.vue
-│   ├── mock/
-│   │   ├── _store.js        # 内存数据仓库
-│   │   ├── user.js / dashboard.js / studyPlan.js
-│   │   ├── course.js / ai.js / analytics.js
-│   │   └── README.md        # Mock 接口文档
-│   ├── router/
-│   │   ├── index.js         # 路由实例 + 导航守卫
-│   │   └── routes.js        # 路由表 + 菜单配置
-│   ├── stores/
-│   │   ├── user.js          # 用户 / 登录
-│   │   ├── studyPlan.js     # 学习计划
-│   │   └── theme.js         # 主题 / 粒子 / 侧栏
-│   ├── styles/
-│   │   ├── variables.scss   # SCSS + CSS 变量
-│   │   ├── mixins.scss      # 毛玻璃 / 渐变混入
-│   │   ├── global.scss
-│   │   └── element-override.scss
-│   ├── utils/
-│   │   ├── storage.js
-│   │   ├── persist.js
-│   │   └── debounce.js
-│   └── views/               # 各业务页面
-├── index.html
+│   │   ├── common/                # 通用组件
+│   │   └── layout/               # 布局组件
+│   ├── directives/                # 自定义指令 (v-lazy)
+│   ├── router/                    # 路由 + 导航守卫
+│   ├── stores/                    # Pinia 状态管理
+│   ├── styles/                    # SCSS 主题
+│   ├── utils/                     # 工具函数
+│   └── views/                     # 业务页面
+├── backend/                       # Spring Boot 后端
+│   ├── pom.xml
+│   └── src/main/
+│       ├── resources/
+│       │   ├── application.yml    # 数据库 / DeepSeek 配置
+│       │   └── schema.sql         # 数据库初始化脚本
+│       └── java/com/ailearning/backend/
+│           ├── controller/        # REST 控制器
+│           ├── service/           # 业务逻辑（含 AI / RAG）
+│           ├── entity/            # JPA 实体
+│           ├── repository/        # 数据访问层
+│           ├── dto/               # 请求 / 响应 DTO
+│           ├── config/            # CORS / JWT 拦截器 / RAG
+│           ├── common/            # 通用工具（AuthContext 等）
+│           └── exception/         # 全局异常处理
+├── docs/                          # 组件文档
 ├── vite.config.js
 └── package.json
 ```
 
 ---
 
+## 技术栈
+
+### 前端
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Vue 3 | Composition API | 核心框架 |
+| Vite | 5.x | 构建与开发服务器 |
+| Vue Router | 5.x | 路由、懒加载、导航守卫 |
+| Pinia | 3.x | 状态管理 + localStorage 持久化 |
+| Axios | 1.x | HTTP 请求封装 |
+| Element Plus | 2.x | UI 组件库 |
+| ECharts | 6.x | 图表（按需引入） |
+| Sass | - | 全局样式与变量 |
+| lodash-es | 4.x | 防抖 |
+
+### 后端
+
+| 技术 | 版本 | 用途 |
+|------|------|------|
+| Spring Boot | 2.7.18 | Web 框架 |
+| Spring Data JPA | - | ORM |
+| MySQL | 8.0 | 数据库 |
+| JJWT | 0.12.6 | JWT 认证 |
+| LangChain4j | 0.36.2 | AI 集成（DeepSeek + RAG） |
+| WebFlux | - | AI API 异步调用 |
+
+---
+
+## 功能模块
+
+### 课程管理（管理员 + CRUD）
+
+- 分类筛选 + 关键字搜索（400ms 防抖）
+- 课程详情抽屉（封面、知识点、进度条、章节时间轴）
+- **管理员**可添加 / 编辑 / 删除课程，普通用户仅可查看
+- 管理员权限基于 JWT `role` 声明 + `AuthInterceptor` 校验
+
+### AI 学习助手
+
+- 接入 DeepSeek API（`deepseek-v4-pro` 模型）
+- RAG 知识增强：基于用户笔记/错题构建增强 Prompt
+- 快捷问题推荐 + 回复保存为笔记
+- 后端 WebClient 60s 超时
+
+### 数据分析
+
+- 学习时长月度趋势折线图
+- 每周学习分布柱状图
+- 任务完成率环形图
+- 课程学习进度列表
+- 学习热力图（日历视图）
+
+### 角色权限
+
+| 角色 | 权限 |
+|------|------|
+| `admin` | 全部功能 + 课程增删改 |
+| `user` | 查看课程、个人学习管理 |
+
+JWT Token 包含 `role` 字段，后端通过 `AuthContext.requireAdmin()` 进行鉴权。
+
+---
+
 ## 配置说明
 
-### 路径别名
+### 前端
 
-- **Vite**：`vite.config.js` → `resolve.alias['@']`
-- **IDE**：`jsconfig.json` → `paths['@/*']`
+- **Vite 代理**：`/api` → `http://127.0.0.1:8080`
+- **baseURL**：`/api`（Axios）
+- **路径别名**：`@` → `src/`
+- **Element Plus**：按需自动注册
+- **主题**：深色/浅色双主题，localStorage 持久化
 
-### Element Plus
+### 后端
 
-- **组件**：通过 `unplugin-vue-components` 按需自动注册，无需手动 `app.use(ElementPlus)`
-- **样式**：`main.js` 全局引入 `element-plus/dist/index.css` 与 `dark/css-vars.css`
-- **主题覆盖**：`src/styles/element-override.scss`
-
-### Mock 数据
-
-- 开发环境由 `vite-plugin-mock` 拦截 `/api/**` 请求
-- 各模块在 `src/mock/*.js` 按业务拆分，**MockJS** 生成随机字段
-- 完整接口列表见 [`src/mock/README.md`](src/mock/README.md)
+- **端口**：8080
+- **数据库**：MySQL 8.0，`ddl-auto: update`
+- **JWT**：24 小时过期
+- **文件上传**：`./uploads/`
+- **DeepSeek**：API Key 配置在 `application.yml`
 
 ### 状态持久化（Pinia + localStorage）
 
-| Store | Key | 持久化内容 |
-|-------|-----|------------|
-| user | `ai-learning-user` | token、用户信息 |
-| studyPlan | `ai-learning-plans-cache` | 计划列表缓存 |
+| Store | Key | 内容 |
+|-------|-----|------|
+| user | `ai-learning-user` | token、用户信息、角色 |
 | theme | `ai-learning-theme` | 深色模式、粒子开关、侧栏折叠 |
-
-### 布局组件
-
-| 组件 | 说明 |
-|------|------|
-| `AppLayout` | 粒子背景 + 网格底纹 + Sidebar + Header + `<router-view>` |
-| `AppHeader` | 标题、面包屑、主题切换、粒子开关、用户信息 |
-| `AppSidebar` | 菜单导航（数据来自 `router/routes.js`） |
-| `ParticleBackground` | Canvas 粒子连线动画 |
-
-### Axios 封装能力
-
-- `baseURL: /api`
-- 请求头自动附加 `Authorization`
-- 全局 `ElLoading`（可通过 `showLoading: false` 关闭）
-- 业务 `code !== 200` 与 HTTP `401` 统一错误提示
-- 401 自动登出并跳转登录页
 
 ---
 
 ## 路由一览
 
-| 路径 | 名称 | 需登录 |
+| 路径 | 页面 | 需登录 |
 |------|------|--------|
 | `/login` | 登录 | 否 |
 | `/dashboard` | 首页 | 是 |
 | `/study-plan` | 学习计划 | 是 |
+| `/pomodoro` | 番茄专注 | 是 |
 | `/course` | 课程管理 | 是 |
+| `/note` | 笔记管理 | 是 |
+| `/wrong-question` | 错题本 | 是 |
+| `/resource` | 学习资源 | 是 |
+| `/achievement` | 成就系统 | 是 |
 | `/ai-assistant` | AI 助手 | 是 |
 | `/analytics` | 数据分析 | 是 |
 | `/profile` | 个人中心 | 是 |
 
-- 支持 **路由懒加载**（`() => import(...)`）
-- **导航守卫**：未登录访问需鉴权页面 → `/login`
-- 预留 `asyncRoutes` 供后续动态路由扩展
+- 路由懒加载 + chunk 命名
+- 导航守卫：未登录 → `/login`
+- 预留 `asyncRoutes` 动态路由扩展
 
 ---
 
-## 开发阶段规划
-
-### 阶段一（已完成）✅
-
-- [x] Vite + Vue3 项目初始化、依赖安装、目录骨架
-
-### 阶段二：基础设施（已完成）✅
-
-- [x] 深色科技风 CSS 变量、毛玻璃、渐变、网格背景
-- [x] `ParticleBackground` 粒子背景组件
-- [x] Pinia：`userStore` / `studyPlanStore` / `themeStore` + localStorage
-- [x] Axios：`request.js`（Loading、拦截器、401、错误提示）
-- [x] Mock：登录、计划、课程、AI、统计、分析接口
-- [x] Router：`routes.js` 统一配置、懒加载、`requiresAuth`、导航守卫
-- [x] `AppLayout` + `AppHeader` + `AppSidebar` + 主内容 `<router-view>`
-
-### 阶段三：认证与业务页面（已完成）✅
-
-- [x] 登录：表单校验、Mock 登录、Pinia 持久化、跳转 Dashboard
-- [x] 路由守卫：未登录访问系统页 → `/login`；刷新保持登录态
-- [x] Dashboard：欢迎区、StatCard、ECharts 折线/柱状图、快捷入口
-- [x] 学习计划：列表分页、筛选、新增/编辑/删除、优先级与状态
-- [x] 课程管理：CourseCard 网格、分类筛选、防抖搜索、详情抽屉与进度条
-- [x] AI 助手：AIChatBox、消息列表、Mock 关键词回复、快捷问题
-- [x] 数据分析：折线/柱状/环形图，联动 `/api/analytics/overview`
-- [x] 个人中心：资料编辑、学习统计、退出登录
-
-### 阶段五：打磨与考核点（已完成）✅
-
-- [x] **组件化复查**：StatCard / ChartCard / CourseCard / AIChatBox 规范使用 props、emit、slot（见 `docs/COMPONENTS.md`）
-- [x] **性能**：路由懒加载 + chunk 命名；`LazyImage` 图片懒加载；课程/计划搜索防抖 400ms；ECharts 异步加载 + 构建分包
-- [x] **动效**：顶层 `page-fade` + 布局内 `fade-slide` 路由过渡；`hover-lift` 卡片悬停；图表 `animation` 入场
-- [x] **联调自测**：`npm install` → `npm run dev` / `npm run build` 通过
-- [x] **代码规范**：关键模块注释、统一命名、README 演示路线与 FAQ
-
----
-
-## 功能验证清单
-
-| 场景 | 操作 | 预期 |
-|------|------|------|
-| 登录 | admin / 123456 | 跳转 Dashboard，token 写入 localStorage |
-| 刷新 | F5 任意系统页 | 保持登录，不跳转登录页 |
-| 未登录访问 | 直接打开 `/dashboard` | 重定向 `/login?redirect=...` |
-| 学习计划 | 新增/编辑/删除/切换状态 | Mock CRUD 生效，列表刷新 |
-| 课程 | 分类 + 搜索 | 防抖 400ms 后请求过滤 |
-| AI | 输入「考研」或点快捷问题 | 返回预设学习建议 |
-| 个人中心 | 修改昵称保存 | localStorage 与页面同步更新 |
-| 退出 | 点击退出登录 | 清空状态，跳转登录页 |
-| 构建 | `npm run build` | 无报错，dist 可 `npm run preview` 预览 |
-| 浅色模式 | 点击右上角月亮图标 | 全局切换浅色，文字卡片对比度正常 |
-| 看板视图 | 学习计划页点击网格式按钮 | 卡片网格展示计划 |
-| 热力图 | 数据分析页底部 | 日历热力图显示学习分布 |
-| 知识点 | 课程管理 → 点击课程 | 抽屉中显示知识点标签 |
-| 章节图例 | 课程详情抽屉 | 绿点=已完成、蓝点=待学习 |
-| 学习记录 | 首页底部 | Timeline 展示最近学习活动 |
-
-### 技术考核覆盖自查
+## 技术考核覆盖
 
 | 考核项 | 实现 |
 |--------|------|
 | Vue3 Composition API | 全部页面 `<script setup>` |
 | Vue Router | 懒加载、守卫、`meta.requiresAuth` |
-| Pinia | user / studyPlan / theme + localStorage |
-| Axios | 统一封装、拦截器、Mock |
+| Pinia | user / studyPlan / theme / notes 等 8 个 Store |
+| Axios | 统一封装、拦截器、JWT 注入 |
 | Element Plus | 按需引入 + 深色主题 |
 | ECharts | Dashboard、数据分析页（含热力图） |
-| 组件化 props/emit/slot | 见 `docs/COMPONENTS.md` |
-| MockJS | `src/mock` + vite-plugin-mock |
-| 自定义指令 v-lazy | `src/directives/lazy.js` IntersectionObserver |
-| KeepAlive | AppLayout `<keep-alive>` 缓存页面 |
+| 组件化 | StatCard / ChartCard / CourseCard / AIChatBox 等 |
+| 自定义指令 v-lazy | IntersectionObserver 图片懒加载 |
+| KeepAlive | AppLayout 缓存页面 |
 | provide/inject | AppLayout → ChartCard 主题跨级通信 |
-| 动态组件 | QuickEntry / AppSidebar `<component :is>` 图标 |
+| 动态组件 | `<component :is>` 图标动态渲染 |
 | 深色/浅色双主题 | CSS 变量 + `data-theme` + ECharts 联动 |
-| Lodash | `lodash-es` debounce |
-| ESLint | `eslint.config.js` + `npm run lint` |
-| Lighthouse 优化 | ECharts tree-shaking、gzip、无障碍、SEO |
-| Clarity 分析 | 生产环境条件加载 |
+| Lodash | debounce 搜索防抖 |
+| gzip/brotli 压缩 | vite-plugin-compression |
+| Spring Boot | REST API + JPA + JWT |
+| 角色权限 | admin/user + AuthInterceptor |
+| RAG 检索增强 | LangChain4j + DeepSeek |
 
 ---
 
-## Lighthouse 性能优化记录
+## 项目阶段
 
-基于 Chrome Lighthouse v13 审计并优化，报告存档于 [`reports/lighthouse/`](reports/lighthouse/)。
-
-### 优化成果
-
-| 维度 | 优化前 | 优化后（预期） | 关键措施 |
-|------|:------:|:------:|------|
-| Performance | 57-67 | **68-78** | ECharts tree-shaking（1MB→569KB）、gzip 压缩 |
-| Accessibility | 74-81 | **88-95** | aria-label、alt、main 地标 |
-| SEO | 75 | **90+** | meta description |
-| Best Practices | 77 | **85+** | 外部域名 preconnect |
-| 总包体积 | 6,767 KiB | **~2,500 KiB**（gzip） | ECharts 按需引入 + gzip 压缩 |
-
-### 已完成的优化项
-
-#### 性能
-- **ECharts 按需引入**：创建 `src/utils/echarts-init.js`，仅注册 line/bar/pie + grid/tooltip/legend/title，体积减少约 43%
-- **构建 gzip/brotli 压缩**：`vite-plugin-compression` 同步生成 `.gz` / `.br` 文件，JS 压缩率约 67%
-- **外部域名 preconnect**：对 picsum.photos、api.dicebear.com、clarity.ms 预连接，加速图片与资源加载
-- **图片 fetchpriority**：CourseCard 封面图设为 `low` 优先级，避免与首屏关键资源争抢带宽
-- **路由懒加载**：全部页面 `() => import(...)` + chunk 命名
-- **ECharts 异步加载**：ChartCard 动态 `import()`，非图表页零开销
-- **搜索防抖**：课程/计划搜索 400ms debounce
-
-#### 无障碍（Accessibility）
-- **图标按钮 aria-label**：AppHeader 的折叠/主题切换按钮添加动态 aria-label
-- **图片 alt 属性**：LazyImage 默认 alt、el-avatar 全部添加 alt
-- **登录页 main 地标**：添加 `role="main"` 语义标记
-- **颜色对比度提升**：文字色 `#94a3b8`→`#cbd5e1`、`#64748b`→`#94a3b8`，满足 WCAG AA 标准
-
-#### SEO
-- **meta description**：`index.html` 添加页面描述元标签
-
-#### UI/UX 升级（ChatGPT + Gemini 建议整合）
-- **色彩系统**：主色蓝色 `#3b82f6` → 靛蓝 `#6366f1`，降低荧光感
-- **浅色模式**：完整的双主题系统（`data-theme` + CSS 变量联动），侧栏/顶栏/卡片/表格/标签/ECharts 全链路适配
-- **对比度**：17 处 SCSS 变量 → CSS 自定义属性，浅色模式下文字清晰可读
-- **阴影体系**：卡片用 `box-shadow` 替代强边框，建立三级视觉层级
-- **降噪**：粒子透明度 -70%、网格 -50%、发光 -60%
-- **微交互**：body 过渡 0.3s、卡片 hover lift、输入框 Focus 光环、表格 hover 淡蓝
-- **课程卡片**：封面渐变蒙层 + hover 缩放动效
-- **AI 聊天气泡**：圆角阴影 + 浅色适配 + 跳动输入动画
-- **章节时间轴**：颜色图例（绿=已完成、蓝=待学习）
-- **仪表盘**：学习记录 Timeline 替代原文字建议
-- **学习计划**：列表/卡片双视图切换
-- **数据分析**：新增学习热力图（日历形式）
-- **课程详情**：新增知识点标签字段
-
-#### Mock 数据质量
-- 用户信息固定化（profile 与 login 返回一致）
-- totalHours 跨接口统一（dashboard/analytics 共享同一数据源）
-- 章节标题有意义的课程专属内容
-- 图表 X 轴标签顺序固定
-- AI 助手最小 300ms loading 反馈
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| 阶段一 | Vite 工程初始化 | ✅ |
+| 阶段二 | 布局/主题/Pinia/Axios | ✅ |
+| 阶段三 | 业务页面 | ✅ |
+| 阶段四 | Spring Boot + MySQL + JWT | ✅ |
+| 阶段五 | 打磨与考核 | ✅ |
+| 阶段六 | Lighthouse 优化 | ✅ |
+| 阶段七 | UI/UX 重构 | ✅ |
+| 阶段八 | DeepSeek AI + RAG + 角色系统 + 课程 CRUD | ✅ |
 
 ---
 
-# 需求说明（课程考核原文）
+## 需求说明
 
-## 项目背景
+### 项目背景
 
-这是一个基于 Vue3 的 Web 前端课程项目，需要实现一个具有科技感和现代 UI 风格的 AI 学习成长助手平台。项目重点用于课程考核，因此需要覆盖 Vue3 前端开发核心技术，包括 Vue Router、Pinia、Axios、组件化开发、动态路由、状态管理等。项目无需真实后端，可使用 Mock 数据实现。
+基于 Vue3 的 Web 前端课程项目，实现科技感 AI 学习成长助手平台，覆盖 Vue Router、Pinia、Axios、组件化、动态路由、状态管理等核心技术。
 
-## 项目目标
+### 技术必选
 
-开发一个具有科技风、高级动态感的学习助手平台，主要面向大学生用户，帮助用户完成学习规划、课程管理、学习数据可视化、AI 学习辅助、知识整理等功能。
+Vue3、Vite、Vue Router、Pinia、Axios、Element Plus、ECharts、Sass
 
-## 整体要求
+### 风格要求
 
-项目必须基于 Vue3 开发，必须使用：
+现代科技风、深色系、渐变高光、毛玻璃、动态粒子背景、平滑动画
 
-- Vue3（Composition API）
-- Vite
-- Vue Router
-- Pinia
-- Axios
-- Element Plus
-- ECharts
-- MockJS（本项目已采用）
+### 页面清单
 
-可选：Lodash、动画库（如 Motion / Animate.css）
-
-项目必须可运行：`npm install` → `npm run dev` 后可直接运行，不能报错。
-
-## 项目风格要求
-
-### 整体风格
-
-现代科技风、未来感、深色系高级 UI。
-
-### 推荐设计方向
-
-- 黑色 / 深蓝色背景
-- 渐变高光、卡片式布局、毛玻璃效果
-- 动态背景粒子、平滑页面切换动画
-- 数字仪表盘风格
-
-要求整体视觉统一，不能像传统管理系统一样单调。
-
-## 页面设计要求
-
-### 登录页
-
-**功能**：账号密码登录、表单验证、登录状态保存、未登录自动跳转  
-
-**技术**：Element Plus Form、Pinia、Router 导航守卫  
-
-**UI**：科技感登录界面、动态背景、轻微动画
-
-### 首页 Dashboard
-
-**功能**：欢迎区、学习统计、今日时长、任务数、完成率、趋势图、快捷入口  
-
-**技术**：ECharts、组件化、响应式布局  
-
-**展示**：折线图、柱状图、进度卡片、统计卡片
-
-### 学习计划模块
-
-**功能**：新增 / 编辑 / 删除、完成状态、按优先级分类  
-
-**技术**：CRUD、表单验证、Pinia、Mock、列表分页  
-
-**字段**：标题、学习内容、截止时间、优先级、状态
-
-### 课程管理模块
-
-**功能**：课程展示、详情、学习进度、分类、搜索  
-
-**技术**：动态组件、computed、watch、Axios + Mock
-
-### AI 学习助手模块（核心展示）
-
-**功能**：模拟 AI 问答、快捷问题推荐（无需真实 AI，Mock 预设回复）  
-
-**技术**：聊天界面、消息气泡、异步请求、Axios + Mock
-
-### 数据分析模块
-
-**功能**：学习时长、任务完成率、课程完成、趋势分析  
-
-**技术**：ECharts 折线 / 柱状 / 环形图、动态动画
-
-### 个人中心模块
-
-**功能**：用户信息、学习统计、头像昵称签名、设置、退出登录  
-
-**技术**：Pinia 用户状态、页面模块化
-
-## 路由设计
-
-建议路径：`/login`、`/dashboard`、`/study-plan`、`/course`、`/ai-assistant`、`/analytics`、`/profile`
-
-**要求**：Vue Router、动态路由、路由懒加载、导航守卫、未登录禁止访问系统页
-
-## 状态管理要求
-
-使用 Pinia：用户状态、登录信息、学习计划状态、系统主题状态；localStorage 持久化
-
-## 网络请求要求
-
-统一 Axios 封装：请求/响应拦截器、错误处理、Loading；Mock 模拟接口
-
-## 组件化要求
-
-建议组件：Header、Sidebar、StatCard、ChartCard、AIChatBox、CourseCard、TaskCard、ProgressPanel  
-
-组件间使用 props、emit、slot
-
-## 性能优化要求
-
-图片懒加载、路由懒加载、防抖搜索、代码模块化
-
-## 最终交付要求
-
-- 完整 Vue3 项目源码，可直接运行
-- 页面完整、无明显 Bug，核心功能可演示
-- 整体 UI 有科技感与动态效果，代码结构规范
-
-## 重点目标
-
-项目看起来高级、有动态感，同时实现 Vue3 技术覆盖。
+登录、Dashboard、学习计划、番茄专注、课程管理、笔记管理、错题本、学习资源、成就系统、AI 助手、数据分析、个人中心

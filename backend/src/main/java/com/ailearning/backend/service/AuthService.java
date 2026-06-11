@@ -40,6 +40,7 @@ public class AuthService {
                 .expiration(Date.from(expireAt))
                 .claim("username", user.getUsername())
                 .claim("nickname", user.getNickname())
+                .claim("role", user.getRole() != null ? user.getRole() : "user")
                 .signWith(secretKey)
                 .compact();
     }
@@ -47,6 +48,11 @@ public class AuthService {
     public Long requireUserId(String authorizationHeader) {
         Claims claims = parseClaims(extractBearerToken(authorizationHeader));
         return Long.valueOf(claims.getSubject());
+    }
+
+    public String extractRole(String authorizationHeader) {
+        Claims claims = parseClaims(extractBearerToken(authorizationHeader));
+        return claims.get("role", String.class);
     }
 
     public void invalidateToken(String authorizationHeader) {

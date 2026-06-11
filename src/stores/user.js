@@ -13,6 +13,7 @@ const defaultUserInfo = () => ({
   signature: '每天进步一点点',
   studyDays: 0,
   totalHours: 0,
+  role: 'user',
 })
 
 /** 用户与登录状态 */
@@ -22,6 +23,7 @@ export const useUserStore = defineStore('user', () => {
   const profileLoading = ref(false)
 
   const isLoggedIn = computed(() => Boolean(token.value))
+  const isAdmin = computed(() => userInfo.value.role === 'admin')
 
   function loadFromStorage() {
     const cached = getStorage(USER_STORAGE_KEY)
@@ -77,6 +79,7 @@ export const useUserStore = defineStore('user', () => {
     userInfo,
     profileLoading,
     isLoggedIn,
+    isAdmin,
     setLogin,
     logout,
     updateProfile,
