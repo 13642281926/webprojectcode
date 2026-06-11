@@ -12,9 +12,9 @@ spring:
   application:
     name: ai-learning-backend
   datasource:
-    url: jdbc:mysql://localhost:3306/ai_learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&createDatabaseIfNotExist=true
+    url: jdbc:mysql://127.0.0.1:3306/ai_learning?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
     username: root
-    password: 123456
+    password: 000000
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
@@ -46,7 +46,7 @@ app:
   file:
     upload-dir: ./uploads
   deepseek:
-    api-key: your-api-key-here
+    api-key: sk-c90d95160bc14006b671637b42e7d559
     base-url: https://api.deepseek.com
     model: deepseek-v4-pro
     system-prompt: 你是一个专业的AI学习助手，帮助用户解答学习相关的问题。
