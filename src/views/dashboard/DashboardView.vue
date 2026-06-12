@@ -1,17 +1,38 @@
 <script setup>
+/**
+ * DashboardView - 仪表盘/首页
+ *
+ * 核心功能：
+ * - 欢迎区域：日期、学习天数、累计时长等概览数据
+ * - 每日励志名言轮换
+ * - AI 学习推荐卡片（快速跳转 AI 助手）
+ * - 快捷操作区：番茄专注、继续学习、记笔记、AI 助手
+ * - 数据概览区：正在进行的课程、即将解锁的成就、待处理任务、待复习错题、最近笔记
+ * - 各模块点击可跳转到对应子页面
+ *
+ * 数据来源：后端 getDashboardStatsApi 提供今日时长等统计，其余为本地占位数据
+ */
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { Timer, List, Trophy, Calendar, ChatDotRound, Clock, Document, Warning, Reading, MagicStick } from '@element-plus/icons-vue'
 import QuickEntry from '@/components/common/QuickEntry.vue'
 import { getDashboardStatsApi } from '@/api/dashboard'
+import { getCourseListApi } from '@/api/course'
+import { getNoteListApi } from '@/api/note'
+import { getStudyPlanListApi } from '@/api/studyPlan'
+import { getWrongQuestionListApi } from '@/api/wrongQuestion'
+import { getAchievementListApi } from '@/api/achievement'
 import { useUserStore } from '@/stores/user'
 
 const router = useRouter()
 const userStore = useUserStore()
+
+/** 后端仪表盘统计数据（今日时长等） */
 const stats = ref(null)
+/** 全页面加载状态 */
 const loading = ref(true)
 
-// 每日励志名言
+/** 每日励志名言库 */
 const dailyQuotes = [
   "学习如逆水行舟，不进则退！",
   "今天的努力是明天的实力！",
@@ -25,53 +46,101 @@ const todayQuote = computed(() => {
   return dailyQuotes[day % dailyQuotes.length]
 })
 
-// 即将解锁的成就
-const upcomingAchievements = ref([
-  { title: '笔记达人', progress: 75, target: 100, points: 25 },
-  { title: '持续学习', progress: 60, target: 100, points: 50 }
-])
+/** 真实数据 —— 从后端 API 拉取 */
+const upcomingAchievements = ref([])
+const ongoingCourses = ref([])
+const pendingTasks = ref([])
+const pendingWrongQuestions = ref([])
+const recentNotes = ref([])
 
-// 正在进行的课程
-const ongoingCourses = ref([
-  { id: 'c1', name: 'Vue3 核心技术实战', progress: 85, cover: 'https://images.unsplash.com/photo-1516116216624-53e697fedbea?w=100', teacher: '尤雨溪', lessons: 48 },
-  { id: 'c2', name: 'Java 后端开发入门', progress: 45, cover: 'https://images.unsplash.com/photo-1587620962725-abab7fe55159?w=100', teacher: '张老师', lessons: 64 },
-  { id: 'c4', name: 'React 18 全面指南', progress: 60, cover: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=100', teacher: 'Dan Abramov', lessons: 56 }
-])
-
-// 待处理任务
-const pendingTasks = ref([
-  { id: 1, title: '完成 Vue3 组件化练习', priority: 'high', deadline: '2026-06-18', type: 'plan' },
-  { id: 2, title: '复习前端工程化', priority: 'medium', deadline: '2026-06-25', type: 'plan' },
-  { id: 3, title: '整理算法题每日打卡', priority: 'high', deadline: '2026-07-30', type: 'plan' },
-  { id: 4, title: '复习 JVM 垃圾回收算法', priority: 'medium', deadline: '2026-06-20', type: 'wrong' }
-])
-
-// 未完成的错题
-const pendingWrongQuestions = ref([
-  { id: 'w1', title: '关于 JVM 垃圾回收算法', category: '计算机', difficulty: '困难', wrongCount: 3 },
-  { id: 'w2', title: 'Vue3 响应式系统', category: '前端', difficulty: '中等', wrongCount: 2 }
-])
-
-// 最近笔记
-const recentNotes = ref([
-  { id: 'n1', title: 'Vue3 响应式原理', category: 'study', updatedAt: '2026-06-11' },
-  { id: 'n2', title: 'Java 并发编程心得', category: 'thought', updatedAt: '2026-06-10' },
-  { id: 'n3', title: 'CSS Grid 布局技巧', category: 'study', updatedAt: '2026-06-09' }
-])
-
+/** 页面挂载时并行拉取所有仪表盘数据 */
 onMounted(async () => {
   loading.value = true
   try {
-    const res = await getDashboardStatsApi()
-    stats.value = res.data
+    const [statsRes, courseRes, noteRes, planRes, wrongRes, achRes] = await Promise.allSettled([
+      getDashboardStatsApi(),
+      getCourseListApi({ page: 1, pageSize: 5 }),
+      getNoteListApi({ page: 1, pageSize: 3 }),
+      getStudyPlanListApi({ page: 1, pageSize: 5, status: 'in_progress' }),
+      getWrongQuestionListApi({ page: 1, pageSize: 3, status: 'unmastered' }),
+      getAchievementListApi(),
+    ])
+
+    // 仪表盘统计
+    if (statsRes.status === 'fulfilled') stats.value = statsRes.value.data
+
+    // 课程 → 正在进行的（取前5条）
+    if (courseRes.status === 'fulfilled') {
+      const list = courseRes.value.data?.list || []
+      ongoingCourses.value = list.slice(0, 5).map(c => ({
+        id: c.id,
+        name: c.title,
+        progress: c.progress || 0,
+        cover: c.cover || '',
+        teacher: c.teacher || '未知',
+        lessons: c.lessons || 0,
+      }))
+    }
+
+    // 最近笔记（取前3条）
+    if (noteRes.status === 'fulfilled') {
+      const list = noteRes.value.data?.list || []
+      recentNotes.value = list.slice(0, 3).map(n => ({
+        id: n.id,
+        title: n.title,
+        category: n.category || '未分类',
+        updatedAt: n.updatedAt?.split('T')[0] || '',
+      }))
+    }
+
+    // 进行中的学习计划 → 待处理任务
+    if (planRes.status === 'fulfilled') {
+      const list = planRes.value.data?.list || []
+      pendingTasks.value = list.slice(0, 5).map(p => ({
+        id: p.id,
+        title: p.title,
+        priority: p.priority || 'medium',
+        deadline: p.deadline || '待定',
+        type: 'plan',
+      }))
+    }
+
+    // 未掌握的错题
+    if (wrongRes.status === 'fulfilled') {
+      const list = wrongRes.value.data?.list || []
+      pendingWrongQuestions.value = list.slice(0, 3).map(w => ({
+        id: w.id,
+        title: w.title,
+        category: w.category || '未分类',
+        difficulty: w.difficulty === 'hard' ? '困难' : w.difficulty === 'medium' ? '中等' : '简单',
+        wrongCount: w.wrongCount || 1,
+      }))
+    }
+
+    // 未解锁成就（按进度排序，取前2条）
+    if (achRes.status === 'fulfilled') {
+      const list = achRes.value.data?.list || achRes.value.data || []
+      upcomingAchievements.value = list
+        .filter(a => !a.unlocked)
+        .sort((a, b) => (b.progressPercent || 0) - (a.progressPercent || 0))
+        .slice(0, 2)
+        .map(a => ({
+          title: a.title,
+          progress: a.progressPercent || Math.round((a.progress / a.target) * 100) || 0,
+          target: 100,
+          points: a.points || 0,
+        }))
+    }
   } finally {
     loading.value = false
   }
 })
 
-// 打开对应模块跳转
+/**
+ * 统一的路由跳转函数
+ * 自动补全路径前缀 "/"，方便点击各卡片区域跳转到对应功能模块
+ */
 const goTo = (path) => {
-  // 如果路径已经以 / 开头，直接使用；否则添加 /
   const fullPath = path.startsWith('/') ? path : `/${path}`
   router.push(fullPath)
 }
@@ -79,7 +148,7 @@ const goTo = (path) => {
 
 <template>
   <div v-loading="loading" class="page-container dashboard">
-    <!-- 欢迎区域 -->
+    <!-- 欢迎区域：日期、问候语、名言、学习统计标签 -->
     <div class="page-hero">
       <div class="page-hero__content">
         <div class="page-badge">
@@ -99,6 +168,7 @@ const goTo = (path) => {
           </el-tag>
         </div>
       </div>
+      <!-- 今日目标卡片 -->
       <div class="page-hero__aside">
         <div class="page-hero__card">
           <div class="page-hero__eyebrow">今日目标</div>
@@ -108,7 +178,7 @@ const goTo = (path) => {
       </div>
     </div>
 
-    <!-- AI 推荐卡片 -->
+    <!-- AI 推荐卡片：根据学习习惯给出建议，提供快速跳转 AI 助手入口 -->
     <el-card class="glass-card hover-lift ai-recommend" shadow="never">
       <div class="ai-recommend__header">
         <div class="ai-recommend__icon">
@@ -125,7 +195,7 @@ const goTo = (path) => {
       </div>
     </el-card>
 
-    <!-- 快速操作区 -->
+    <!-- 快速操作区：4 个常用入口卡片 -->
     <div class="quick-actions">
       <el-card class="glass-card hover-lift quick-card" shadow="never" @click="goTo('/pomodoro')">
         <div class="quick-card__icon" style="background: linear-gradient(135deg, #3b82f6, #8b5cf6);">
@@ -157,10 +227,10 @@ const goTo = (path) => {
       </el-card>
     </div>
 
-    <!-- 今日概览 -->
+    <!-- 今日概览：左侧课程 + 右侧成就 -->
     <el-row :gutter="20">
       <el-col :xs="24" :lg="16">
-        <!-- 正在进行的课程 -->
+        <!-- 正在进行的课程列表 -->
         <el-card class="glass-card hover-lift section-card" shadow="never">
           <template #header>
             <div class="section-header">
@@ -184,7 +254,7 @@ const goTo = (path) => {
         </el-card>
       </el-col>
       <el-col :xs="24" :lg="8">
-        <!-- 即将解锁的成就 -->
+        <!-- 即将解锁的成就进度 -->
         <el-card class="glass-card hover-lift section-card" shadow="never">
           <template #header>
             <div class="section-header">
@@ -204,7 +274,7 @@ const goTo = (path) => {
       </el-col>
     </el-row>
 
-    <!-- 待办事项 -->
+    <!-- 待办事项：左侧任务 + 右侧错题 -->
     <el-row :gutter="20">
       <el-col :xs="24" :lg="12">
         <el-card class="glass-card hover-lift section-card" shadow="never">
@@ -216,6 +286,7 @@ const goTo = (path) => {
           </template>
           <div class="task-list">
             <div v-for="task in pendingTasks" :key="task.id" class="task-item" @click="goTo('/study-plan')">
+              <!-- 优先级圆点：红=高，黄=中，绿=低 -->
               <div class="task-priority" :class="'priority-' + task.priority"></div>
               <div class="task-content">
                 <h4>{{ task.title }}</h4>
@@ -250,7 +321,7 @@ const goTo = (path) => {
       </el-col>
     </el-row>
 
-    <!-- 最近笔记 -->
+    <!-- 最近笔记网格 -->
     <el-card class="glass-card hover-lift section-card" shadow="never">
       <template #header>
         <div class="section-header">

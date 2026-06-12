@@ -1,4 +1,14 @@
 <script setup>
+/**
+ * StudyPlanView - 学习计划
+ *
+ * 核心功能：
+ * - 表格/卡片双视图模式切换
+ * - 创建、编辑、删除计划，支持状态切换（待开始/进行中/已完成）
+ * - 多条件筛选：优先级（高/中/低）、状态、关键词搜索（400ms 防抖）
+ * - 完成状态使用删除线标识，已完成的卡片降低透明度
+ * - 数据由 Pinia store（useStudyPlanStore）统一管理
+ */
 import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, List, Grid, Calendar, Trophy, Edit, Delete, Refresh } from '@element-plus/icons-vue'
@@ -7,13 +17,19 @@ import { PLAN_PRIORITY, PLAN_STATUS } from '@/utils/constants'
 import { debounce } from '@/utils/debounce'
 
 const planStore = useStudyPlanStore()
-const viewMode = ref('table') // 'table' | 'card'
+/** 视图模式：table（表格）/ card（卡片） */
+const viewMode = ref('table')
 
+/** 新增/编辑对话框 */
 const dialogVisible = ref(false)
+/** 对话框标题 */
 const dialogTitle = ref('新增计划')
+/** 正在编辑的计划 ID，null 表示新增 */
 const editingId = ref(null)
+/** 表单组件引用，用于触发 validate */
 const formRef = ref()
 
+/** 计划表单数据 */
 const form = reactive({
   title: '',
   content: '',
@@ -22,16 +38,18 @@ const form = reactive({
   status: 'pending',
 })
 
+/** 表单校验规则：标题和截止时间为必填 */
 const rules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
   deadline: [{ required: true, message: '请选择截止时间', trigger: 'change' }],
 }
 
-/** 关键词防抖搜索（400ms） */
+/** 关键词搜索防抖（400ms），减少 API 请求频率 */
 const debouncedKeywordSearch = debounce(() => {
   planStore.fetchPlans({ page: 1 })
 }, 400)
 
+/** 监听搜索关键词变化，触发防抖搜索 */
 watch(
   () => planStore.query.keyword,
   (val, oldVal) => {
@@ -39,10 +57,12 @@ watch(
   },
 )
 
+/** 页面挂载时拉取计划列表 */
 onMounted(() => {
   planStore.fetchPlans()
 })
 
+/** 打开新增计划对话框，清空表单 */
 function openCreate() {
   editingId.value = null
   dialogTitle.value = '新增计划'
@@ -50,6 +70,7 @@ function openCreate() {
   dialogVisible.value = true
 }
 
+/** 打开编辑计划对话框，回填已有数据 */
 function openEdit(row) {
   editingId.value = row.id
   dialogTitle.value = '编辑计划'
@@ -57,6 +78,7 @@ function openEdit(row) {
   dialogVisible.value = true
 }
 
+/** 提交表单：先校验，再根据编辑/新增分发 store 对应方法 */
 async function handleSubmit() {
   await formRef.value?.validate()
   if (editingId.value) {
@@ -69,21 +91,25 @@ async function handleSubmit() {
   dialogVisible.value = false
 }
 
+/** 删除计划：弹出确认框后调用 store */
 async function handleDelete(row) {
   await ElMessageBox.confirm(`确定删除「${row.title}」？`, '提示', { type: 'warning' })
   await planStore.removePlan(row.id)
   ElMessage.success('已删除')
 }
 
+/** 切换计划完成状态（待开始 <-> 进行中 <-> 已完成） */
 async function handleToggle(row) {
   await planStore.toggleStatus(row.id)
   ElMessage.success('状态已更新')
 }
 
+/** 筛选条件变更时重置到第一页并重新拉取 */
 function handleFilter() {
   planStore.fetchPlans({ page: 1 })
 }
 
+/** 分页切换时重新拉取指定页 */
 function handlePageChange(page) {
   planStore.fetchPlans({ page })
 }
@@ -91,7 +117,7 @@ function handlePageChange(page) {
 
 <template>
   <div class="page-container study-plan">
-    <!-- 页面标题区域 -->
+    <!-- 页面标题区域：计划概览 + 完成进度卡片 -->
     <div class="page-hero">
       <div class="page-hero__content">
         <div class="page-badge">
@@ -110,6 +136,7 @@ function handlePageChange(page) {
       <div class="page-hero__aside">
         <div class="page-hero__card">
           <div class="page-hero__eyebrow">当前进度</div>
+          <!-- 已完成数 / 总数 -->
           <div class="page-hero__metric">{{ planStore.plans.filter(p => p.status === 'done').length }}<span class="page-hero__metric-unit">/{{ planStore.plans.length }}</span></div>
           <div class="page-hero__hint">已完成计划</div>
         </div>
@@ -118,7 +145,7 @@ function handlePageChange(page) {
 
     <!-- 主内容区域 -->
     <div class="page-shell">
-      <!-- 工具栏 -->
+      <!-- 工具栏：优先级/状态筛选 + 关键词搜索 + 视图切换 + 新增按钮 -->
       <div class="filter-panel">
         <div class="filter-panel__grow">
           <el-form :inline="true" class="study-plan__filter">
@@ -148,6 +175,7 @@ function handlePageChange(page) {
           </el-form>
         </div>
         <div class="filter-panel__actions">
+          <!-- 视图切换按钮组 -->
           <el-button-group size="default">
             <el-button :type="viewMode === 'table' ? 'primary' : ''" @click="viewMode = 'table'">
               <el-icon><List /></el-icon>
@@ -170,6 +198,7 @@ function handlePageChange(page) {
           <el-table-column prop="title" label="标题" min-width="160">
             <template #default="{ row }">
               <div class="table-title">
+                <!-- 已完成计划附加删除线样式 -->
                 <span :class="{ 'text-strikethrough': row.status === 'done' }">{{ row.title }}</span>
               </div>
             </template>
@@ -228,6 +257,7 @@ function handlePageChange(page) {
               {{ PLAN_STATUS[plan.status]?.label }}
             </el-tag>
           </div>
+          <!-- 内容预览最多 2 行 -->
           <p class="study-plan__card-content" :class="{ 'text-strikethrough': plan.status === 'done' }">
             {{ plan.content }}
           </p>
@@ -266,7 +296,7 @@ function handlePageChange(page) {
       </div>
     </div>
 
-    <!-- 对话框 -->
+    <!-- 新增/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="520px" destroy-on-close class="modern-dialog">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" class="modern-form">
         <el-form-item label="标题" prop="title">

@@ -1,5 +1,6 @@
 <template>
   <div class="resource-page">
+    <!-- 页面标题与上传按钮 -->
     <div class="page-header">
       <h2 class="page-title">
         <el-icon><FolderOpened /></el-icon>
@@ -11,6 +12,7 @@
       </el-button>
     </div>
 
+    <!-- 筛选栏：分类 + 文件类型 + 搜索 -->
     <div class="filter-bar">
       <el-select v-model="filterCategory" placeholder="分类" clearable @change="handleFilter">
         <el-option
@@ -33,6 +35,7 @@
       />
     </div>
 
+    <!-- 资源网格 -->
     <div class="resources-grid" v-loading="loading">
       <div
         v-for="resource in resources"
@@ -40,12 +43,14 @@
         class="resource-card"
         @click="handleOpen(resource)"
       >
+        <!-- 文件类型图标 -->
         <div class="resource-icon">
           <el-icon :size="48"><component :is="getFileIcon(resource.type)" /></el-icon>
         </div>
         <div class="resource-info">
           <div class="resource-title" :title="resource.title">{{ resource.title }}</div>
           <div class="resource-desc">{{ resource.description }}</div>
+          <!-- 文件大小 / 下载次数 / 创建时间 -->
           <div class="resource-meta">
             <span class="resource-size">{{ resource.size }}</span>
             <span class="resource-downloads">
@@ -55,6 +60,7 @@
             <span class="resource-time">{{ resource.createTime?.split(' ')[0] }}</span>
           </div>
         </div>
+        <!-- 下载/删除操作按钮 -->
         <div class="resource-actions" @click.stop>
           <el-button type="primary" size="small" @click="handleDownload(resource)">
             <el-icon><Download /></el-icon>
@@ -67,6 +73,7 @@
       </div>
     </div>
 
+    <!-- 分页 -->
     <div class="pagination-container">
       <el-pagination
         v-model:current-page="query.page"
@@ -79,6 +86,7 @@
       />
     </div>
 
+    <!-- 上传对话框 -->
     <el-dialog
       v-model="uploadDialogVisible"
       title="上传资源"
@@ -106,6 +114,7 @@
             placeholder="请输入资源描述"
           />
         </el-form-item>
+        <!-- 拖拽上传区域，auto-upload=false 手动控制上传时机 -->
         <el-form-item label="文件">
           <el-upload
             drag
@@ -129,6 +138,18 @@
 </template>
 
 <script setup>
+/**
+ * ResourceView - 学习资源库
+ *
+ * 核心功能：
+ * - 资源列表展示（网格布局），按分类和文件类型筛选，关键词搜索（400ms 防抖）
+ * - 上传资源：标题、分类、描述 + 拖拽上传文件（FormData 多部分上传）
+ * - 下载资源：通过 API 获取 Blob，创建临时下载链接自动触发浏览器下载
+ *   - 自动根据文件类型补全扩展名（pdf/docx/md/xlsx/mp4/zip/png）
+ * - 删除资源（含确认弹窗）
+ * - 根据文件类型显示对应图标（Document/VideoCamera/Box/Picture）
+ * - 数据由 Pinia store（useResourceStore）统一管理
+ */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -150,32 +171,40 @@ import { downloadResourceApi } from '@/api/resource'
 
 const resourceStore = useResourceStore()
 
+/** 从 store 映射的响应式状态 */
 const loading = computed(() => resourceStore.loading)
 const resources = computed(() => resourceStore.resources)
 const total = computed(() => resourceStore.total)
 const categories = computed(() => resourceStore.categories)
+/** 双向绑定 store 分页查询参数 */
 const query = computed({
   get: () => resourceStore.query,
   set: (val) => { resourceStore.query = val }
 })
 
+/** 本地筛选状态 */
 const filterCategory = ref('')
 const filterType = ref('')
 const searchKeyword = ref('')
+/** 上传对话框 */
 const uploadDialogVisible = ref(false)
+/** 上传表单数据 */
 const uploadForm = ref({
   title: '',
   category: '',
   description: '',
   file: null,
 })
+/** 上传按钮 loading */
 const uploadLoading = ref(false)
 
+/** 页面挂载时拉取资源列表和分类 */
 onMounted(() => {
   resourceStore.fetchResources()
   resourceStore.fetchCategories()
 })
 
+/** 重新拉取列表，传入当前筛选条件 */
 const handleFilter = () => {
   resourceStore.fetchResources({
     category: filterCategory.value,
@@ -186,19 +215,27 @@ const handleFilter = () => {
   })
 }
 
+/** 搜索防抖 400ms */
 const handleSearch = debounce(() => {
   handleFilter()
 }, 400)
 
+/** 打开上传对话框，重置表单 */
 const handleUpload = () => {
   uploadForm.value = { title: '', category: '', description: '', file: null }
   uploadDialogVisible.value = true
 }
 
+/** 文件选择变更时，保存原始 File 对象 */
 const handleFileChange = (file) => {
   uploadForm.value.file = file.raw
 }
 
+/**
+ * 保存上传
+ * 构建 FormData 多部分表单，包含 file + title + category + description
+ * 调用 store.uploadResource 完成上传
+ */
 const handleSaveUpload = async () => {
   if (!uploadForm.value.title) {
     ElMessage.warning('请输入标题')
@@ -208,7 +245,7 @@ const handleSaveUpload = async () => {
     ElMessage.warning('请选择文件')
     return
   }
-  
+
   try {
     uploadLoading.value = true
     const formData = new FormData()
@@ -232,18 +269,28 @@ const handleSaveUpload = async () => {
   }
 }
 
+/** 打开资源详情（当前为占位） */
 const handleOpen = (resource) => {
   ElMessage.info('资源详情')
 }
 
+/**
+ * 下载资源
+ * 1. 调用 downloadResourceApi 获取 Blob 响应
+ * 2. 创建 ObjectURL，构建隐藏 a 标签触发浏览器下载
+ * 3. 自动根据资源类型补全文件扩展名
+ * 4. 下载完成后清理 URL 对象和 DOM 节点
+ */
 const handleDownload = async (resource) => {
   try {
     const res = await downloadResourceApi(resource.id)
 
+    // 将 Blob 转为临时 URL
     const url = window.URL.createObjectURL(res)
     const link = document.createElement('a')
     link.href = url
-    
+
+    // 自动补全文件扩展名
     let filename = resource.title
     if (!filename.includes('.')) {
       const ext = {
@@ -257,13 +304,14 @@ const handleDownload = async (resource) => {
       }[resource.type] || ''
       filename += ext
     }
-    
+
+    // 触发浏览器下载
     link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
-    
+
     ElMessage.success(`开始下载: ${resource.title}`)
     handleFilter()
   } catch (e) {
@@ -272,6 +320,7 @@ const handleDownload = async (resource) => {
   }
 }
 
+/** 删除资源：弹出确认框后调用 store */
 const handleDelete = async (id) => {
   try {
     await ElMessageBox.confirm('确定要删除这个资源吗？', '提示', {
@@ -287,6 +336,14 @@ const handleDelete = async (id) => {
   }
 }
 
+/**
+ * 根据文件类型返回对应的 Element Plus 图标组件
+ * Document: pdf/docx/md/xlsx
+ * VideoCamera: mp4
+ * Box: zip
+ * Picture: png
+ * 默认: Files
+ */
 const getFileIcon = (type) => {
   const map = {
     pdf: Document,

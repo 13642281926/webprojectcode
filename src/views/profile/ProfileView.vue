@@ -1,4 +1,15 @@
 <script setup>
+/**
+ * ProfileView - 个人资料页
+ *
+ * 核心功能：
+ * - 统计卡片展示：学习天数、累计学时、账号名称
+ * - 个人资料编辑：昵称（必填）、个性签名、头像 URL
+ * - 头像展示：优先使用图片 URL，无图时显示昵称首字
+ * - 保存调用 updateUserProfileApi 并同步到 userStore
+ * - 退出登录：调用 logoutApi 清除服务端会话 + 前端清除 token 并跳转到登录页
+ * - 展示笔记列表（来自 noteStore），支持删除
+ */
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -11,19 +22,24 @@ import { Timer, Calendar, Edit, Delete, Collection } from '@element-plus/icons-v
 const router = useRouter()
 const userStore = useUserStore()
 const noteStore = useNoteStore()
+/** 保存按钮 loading 状态 */
 const saving = ref(false)
+/** 表单组件引用 */
 const formRef = ref()
 
+/** 个人资料表单 */
 const form = reactive({
   nickname: '',
   signature: '',
   avatar: '',
 })
 
+/** 表单校验规则：昵称为必填 */
 const rules = {
   nickname: [{ required: true, message: '请输入昵称', trigger: 'blur' }],
 }
 
+/** 页面挂载：拉取用户信息并回填表单 */
 onMounted(async () => {
   await userStore.fetchProfile()
   Object.assign(form, {
@@ -33,6 +49,12 @@ onMounted(async () => {
   })
 })
 
+/**
+ * 保存个人资料
+ * 1. 触发表单校验
+ * 2. 合并原有 userInfo 与表单数据，调用后端 API
+ * 3. 将响应数据更新到 userStore
+ */
 async function handleSave() {
   await formRef.value?.validate()
   saving.value = true
@@ -48,6 +70,12 @@ async function handleSave() {
   }
 }
 
+/**
+ * 退出登录
+ * 1. 调用后端 logoutApi（失败也继续前端退出）
+ * 2. 清除 frontend 登录状态（userStore.logout）
+ * 3. 跳转到登录页
+ */
 async function handleLogout() {
   try {
     await logoutApi()
@@ -62,6 +90,7 @@ async function handleLogout() {
 
 <template>
   <div class="page-container profile">
+    <!-- 统计卡片行：学习天数 / 累计学时 / 账号 -->
     <el-row :gutter="20" class="stat-row">
       <el-col :xs="24" :sm="8">
         <StatCard label="学习天数" :value="userStore.userInfo.studyDays ?? 0" unit="天" :icon="Calendar" color="#3b82f6" />
@@ -74,9 +103,11 @@ async function handleLogout() {
       </el-col>
     </el-row>
 
+    <!-- 个人资料编辑卡片 -->
     <el-card class="glass-card profile__card" shadow="never">
       <template #header>个人资料</template>
       <div class="profile__main">
+        <!-- 头像：图片 URL 优先，否则显示昵称首字 -->
         <el-avatar :size="96" :src="form.avatar || userStore.userInfo.avatar" :alt="(form.nickname || userStore.userInfo.nickname) + '的头像'">
           {{ form.nickname?.[0] || '学' }}
         </el-avatar>
@@ -98,6 +129,7 @@ async function handleLogout() {
       </div>
     </el-card>
 
+    <!-- AI 学习笔记卡片 -->
     <el-card class="glass-card profile__notes" shadow="never">
       <template #header>
         <div class="notes-header">
@@ -105,11 +137,12 @@ async function handleLogout() {
           <el-tag size="small" effect="plain">{{ noteStore.notes.length }} 条</el-tag>
         </div>
       </template>
-      
+
       <el-empty v-if="!noteStore.notes.length" description="还没有笔记，快去 AI 助手聊聊吧" />
-      
+
       <div v-else class="notes-list">
         <div v-for="note in noteStore.notes" :key="note.id" class="note-item glass-card">
+          <!-- 笔记内容预览（最多 4 行） -->
           <div class="note-item__content">{{ note.content }}</div>
           <div class="note-item__footer">
             <span class="note-item__time">{{ note.time }}</span>

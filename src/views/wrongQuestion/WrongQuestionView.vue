@@ -18,7 +18,7 @@
       </div>
     </div>
 
-    <!-- 统计卡片 -->
+    <!-- 统计卡片：新错题 / 复习中 / 已掌握 -->
     <div class="metric-grid">
       <div class="metric-card glass-card hover-lift">
         <div class="metric-card__icon" style="background: linear-gradient(135deg, #ef4444, #dc2626)">
@@ -49,7 +49,7 @@
       </div>
     </div>
 
-    <!-- 工具栏 -->
+    <!-- 工具栏：分类/难度/状态筛选 + 搜索 + 添加按钮 -->
     <div class="filter-panel">
       <div class="filter-panel__grow">
         <el-select v-model="filterCategory" placeholder="分类" clearable @change="handleFilter" style="width: 150px">
@@ -86,7 +86,7 @@
       </div>
     </div>
 
-    <!-- 错题列表 -->
+    <!-- 错题列表：按状态显示左侧彩色边框（红=新、黄=复习中、绿=已掌握） -->
     <div class="content-stack" v-loading="loading">
       <div
         v-for="question in wrongQuestions"
@@ -96,12 +96,14 @@
         @click="handleOpen(question)"
       >
         <div class="question-header">
+          <!-- 标题 + 状态标签 -->
           <div class="question-title" :title="question.title">
             <el-tag :type="getStatusType(question.status)" size="default" :effect="question.status === 'mastered' ? 'dark' : 'plain'">
               {{ getStatusText(question.status) }}
             </el-tag>
             {{ question.title }}
           </div>
+          <!-- 操作按钮：掌握（非已掌握时显示）/ 编辑 / 删除 -->
           <div class="question-actions" @click.stop>
             <el-button
               v-if="question.status !== 'mastered'"
@@ -123,7 +125,9 @@
             </el-button>
           </div>
         </div>
+        <!-- 题目内容预览 -->
         <div class="question-content">{{ question.content }}</div>
+        <!-- 元信息：难度 / 分类 / 错误次数 / 创建时间 -->
         <div class="question-meta">
           <el-tag :type="getDifficultyType(question.difficulty)" size="default" effect="plain">
             {{ question.difficulty }}
@@ -157,7 +161,7 @@
       />
     </div>
 
-    <!-- 对话框 -->
+    <!-- 对话框：编辑模式 / 详情模式 -->
     <el-dialog
       v-model="dialogVisible"
       :title="isEditing ? (currentQuestion?.id ? '编辑错题' : '添加错题') : '错题详情'"
@@ -165,6 +169,7 @@
       :destroy-on-close="true"
       class="modern-dialog"
     >
+      <!-- 编辑表单 -->
       <div v-if="isEditing" class="edit-form">
         <el-form :model="formData" label-width="80px" class="modern-form">
           <el-form-item label="标题">
@@ -212,6 +217,7 @@
             />
           </el-form-item>
           <el-form-item label="标签">
+            <!-- allow-create 支持自定义标签 -->
             <el-select
               v-model="formData.tags"
               multiple
@@ -223,6 +229,7 @@
           </el-form-item>
         </el-form>
       </div>
+      <!-- 详情只读视图 -->
       <div v-else class="detail-view" v-if="currentQuestion">
         <div class="detail-section">
           <h4>
@@ -269,6 +276,18 @@
 </template>
 
 <script setup>
+/**
+ * WrongQuestionView - 错题本
+ *
+ * 核心功能：
+ * - 错题列表展示，按分类、难度、状态（新错题/复习中/已掌握）筛选
+ * - 关键词搜索（400ms 防抖）
+ * - 统计卡片：新错题数、复习中数、已掌握数
+ * - 对话框：新建/编辑/详情三合一，根据 isEditing 切换编辑/只读模式
+ * - 支持标记"已掌握"操作
+ * - 编辑表单含标题、分类、难度、题目内容、答案、解析、标签
+ * - 数据由 Pinia store（useWrongQuestionStore）统一管理
+ */
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -291,25 +310,33 @@ import { debounce } from 'lodash-es'
 
 const wrongQuestionStore = useWrongQuestionStore()
 
+/** 从 store 映射的响应式状态 */
 const loading = computed(() => wrongQuestionStore.loading)
 const wrongQuestions = computed(() => wrongQuestionStore.wrongQuestions)
 const total = computed(() => wrongQuestionStore.total)
 const categories = computed(() => wrongQuestionStore.categories)
+/** 双向绑定 store 分页查询参数 */
 const query = computed({
   get: () => wrongQuestionStore.query,
   set: (val) => { wrongQuestionStore.query = val }
 })
+/** 统计数量：已掌握 / 复习中 / 新错题 */
 const masteredCount = computed(() => wrongQuestionStore.masteredCount)
 const reviewingCount = computed(() => wrongQuestionStore.reviewingCount)
 const newCount = computed(() => wrongQuestionStore.newCount)
 
+/** 本地筛选状态 */
 const filterCategory = ref('')
 const filterDifficulty = ref('')
 const filterStatus = ref('')
 const searchKeyword = ref('')
+/** 对话框可见性 */
 const dialogVisible = ref(false)
+/** 是否为编辑模式（否则为详情只读模式） */
 const isEditing = ref(false)
+/** 当前选中的错题（用于详情展示或编辑回填） */
 const currentQuestion = ref(null)
+/** 编辑表单数据 */
 const formData = ref({
   title: '',
   content: '',
@@ -320,11 +347,13 @@ const formData = ref({
   tags: [],
 })
 
+/** 页面挂载时拉取错题列表和分类 */
 onMounted(() => {
   wrongQuestionStore.fetchWrongQuestions()
   wrongQuestionStore.fetchCategories()
 })
 
+/** 重新拉取列表，传入当前筛选条件 */
 const handleFilter = () => {
   wrongQuestionStore.fetchWrongQuestions({
     category: filterCategory.value,
@@ -336,10 +365,12 @@ const handleFilter = () => {
   })
 }
 
+/** 搜索防抖 400ms */
 const handleSearch = debounce(() => {
   handleFilter()
 }, 400)
 
+/** 新建错题：清空表单，进入编辑模式 */
 const handleCreate = () => {
   isEditing.value = true
   currentQuestion.value = null
@@ -347,12 +378,14 @@ const handleCreate = () => {
   dialogVisible.value = true
 }
 
+/** 打开错题详情（只读模式） */
 const handleOpen = (question) => {
   isEditing.value = false
   currentQuestion.value = question
   dialogVisible.value = true
 }
 
+/** 编辑已有错题：回填数据（tags 从逗号分割的字符串转为数组），进入编辑模式 */
 const handleEdit = (question) => {
   isEditing.value = true
   currentQuestion.value = question
@@ -368,12 +401,16 @@ const handleEdit = (question) => {
   dialogVisible.value = true
 }
 
+/**
+ * 保存错题（新建或更新）
+ * 根据 currentQuestion.id 判断是新增还是编辑
+ */
 const handleSave = async () => {
   if (!formData.value.title || !formData.value.content) {
     ElMessage.warning('请填写完整信息')
     return
   }
-  
+
   try {
     if (currentQuestion.value?.id) {
       await wrongQuestionStore.editWrongQuestion(currentQuestion.value.id, formData.value)
@@ -389,6 +426,7 @@ const handleSave = async () => {
   }
 }
 
+/** 删除错题：弹出确认框后调用 store */
 const handleDelete = async (id) => {
   try {
     await ElMessageBox.confirm('确定要删除这道错题吗？', '提示', {
@@ -404,6 +442,7 @@ const handleDelete = async (id) => {
   }
 }
 
+/** 将错题标记为"已掌握" */
 const handleMarkMastered = async (id) => {
   try {
     await wrongQuestionStore.markAsMastered(id)
@@ -414,6 +453,10 @@ const handleMarkMastered = async (id) => {
   }
 }
 
+/**
+ * 根据错题状态返回对应的 Element Plus tag 类型
+ * new -> danger, reviewing -> warning, mastered -> success
+ */
 const getStatusType = (status) => {
   const map = {
     new: 'danger',
@@ -423,6 +466,7 @@ const getStatusType = (status) => {
   return map[status] || 'info'
 }
 
+/** 根据错题状态返回中文显示文本 */
 const getStatusText = (status) => {
   const map = {
     new: '新错题',
@@ -432,6 +476,10 @@ const getStatusText = (status) => {
   return map[status] || status
 }
 
+/**
+ * 根据难度返回对应的 Element Plus tag 类型
+ * 简单 -> success, 中等 -> warning, 困难 -> danger
+ */
 const getDifficultyType = (difficulty) => {
   const map = {
     简单: 'success',

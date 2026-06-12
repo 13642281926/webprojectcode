@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * LoginView - 登录/注册页
+ *
+ * 核心功能：
+ * - 双标签切换（登录/注册），表单校验与提交
+ * - 粒子背景动画（可开关），科技感品牌展示区
+ * - 登录/注册成功后自动写入 token 与 userInfo 到 userStore，跳转到目标页
+ * - 演示账号 admin/123456，方便快速体验
+ */
 import { reactive, ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -13,14 +22,19 @@ const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
 const themeStore = useThemeStore()
-const loading = ref(false)
-const activeTab = ref('login') // 'login' | 'register'
 
+/** 按钮 loading 状态，防止重复提交 */
+const loading = ref(false)
+/** 当前激活的标签页：'login' 或 'register' */
+const activeTab = ref('login')
+
+/** 登录表单数据，预填演示账号方便体验 */
 const loginForm = reactive({
   username: 'admin',
   password: '123456',
 })
 
+/** 注册表单数据，昵称为选填项，默认使用账号 */
 const registerForm = reactive({
   username: '',
   password: '',
@@ -28,6 +42,7 @@ const registerForm = reactive({
   nickname: '',
 })
 
+/** 登录表单校验规则：账号 3-20 位，密码 6-32 位 */
 const loginRules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -39,6 +54,7 @@ const loginRules = {
   ],
 }
 
+/** 注册表单校验规则：在登录规则基础上增加二次密码确认和昵称长度校验 */
 const registerRules = {
   username: [
     { required: true, message: '请输入账号', trigger: 'blur' },
@@ -51,6 +67,7 @@ const registerRules = {
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     {
+      /** 自定义校验器：确保两次输入密码一致 */
       validator: (_rule, value, callback) => {
         if (value !== registerForm.password) {
           callback(new Error('两次输入的密码不一致'))
@@ -66,26 +83,38 @@ const registerRules = {
   ],
 }
 
+/** 表单组件引用，用于调用 validate 等 Element Plus 表单方法 */
 const loginFormRef = ref()
 const registerFormRef = ref()
+/** 根据当前 tab 自动返回对应的表单引用 */
 const currentFormRef = computed(() => (activeTab.value === 'login' ? loginFormRef : registerFormRef))
 
+/** 品牌展示区域亮点数据：成就系统、数据洞察、AI 陪练 */
 const highlights = [
   { title: '成就激励', desc: '自动同步学习成果，形成可视化成长路径', icon: Trophy },
   { title: '数据洞察', desc: '趋势分析与热力图帮助你看清学习节奏', icon: DataAnalysis },
   { title: 'AI 陪练', desc: '智能问答与学习建议提高复盘效率', icon: MagicStick },
 ]
 
+/**
+ * 处理登录提交
+ * 1. 先触发表单校验
+ * 2. 调用登录 API
+ * 3. 将返回的 token + userInfo 写入 store
+ * 4. 跳转到 redirect 地址或默认仪表盘
+ */
 async function handleLogin() {
   await loginFormRef.value?.validate()
   loading.value = true
   try {
     const res = await loginApi(loginForm)
+    // 将认证信息持久化到 Pinia store（pinia-plugin-persistedstate 自动同步 localStorage）
     userStore.setLogin({
       token: res.data.token,
       userInfo: res.data.userInfo,
     })
     ElMessage.success('登录成功')
+    // 支持登录后重定向回原目标页
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } catch {
@@ -95,11 +124,18 @@ async function handleLogin() {
   }
 }
 
+/**
+ * 处理注册提交
+ * 1. 先校验表单
+ * 2. 调用注册 API，后端返回 token 即表示自动登录
+ * 3. 写入 store 并跳转仪表盘
+ */
 async function handleRegister() {
   await registerFormRef.value?.validate()
   loading.value = true
   try {
     const res = await registerApi(registerForm)
+    // 注册成功后自动登录：后端直接返回 token
     userStore.setLogin({
       token: res.data.token,
       userInfo: res.data.userInfo,
@@ -113,6 +149,7 @@ async function handleRegister() {
   }
 }
 
+/** 根据当前 tab 分发到登录或注册处理函数 */
 function handleSubmit() {
   return activeTab.value === 'login' ? handleLogin() : handleRegister()
 }
@@ -120,9 +157,12 @@ function handleSubmit() {
 
 <template>
   <div class="login-page tech-grid-bg">
+    <!-- 粒子背景动画，根据主题开关控制 -->
     <ParticleBackground v-if="themeStore.showParticles" color="59, 130, 246" :count="80" />
+    <!-- 顶部光晕装饰 -->
     <div class="login-page__glow" />
     <div class="login-shell">
+      <!-- 左侧品牌展示区 -->
       <section class="login-showcase glass-card" aria-label="产品介绍">
         <div class="login-showcase__badge">AI Learning Growth Studio</div>
         <h1 class="gradient-text login-showcase__title">更有沉浸感的学习空间，更清晰可见的成长轨迹</h1>
@@ -130,6 +170,7 @@ function handleSubmit() {
           聚合学习计划、课程、笔记、错题、资源与 AI 助手，把碎片努力沉淀成连续进步。
         </p>
         <img class="login-showcase__hero" :src="heroImage" alt="AI 学习成长助手视觉插图" />
+        <!-- 产品亮点三列 -->
         <div class="login-showcase__highlights">
           <div v-for="item in highlights" :key="item.title" class="login-showcase__item">
             <div class="login-showcase__icon">
@@ -143,7 +184,9 @@ function handleSubmit() {
         </div>
       </section>
 
+      <!-- 右侧登录/注册卡片 -->
       <el-card class="login-card gradient-border-card" shadow="never" role="main">
+        <!-- 品牌标识与标题 -->
         <div class="login-card__brand">
           <span class="login-card__brand-mark">AI</span>
           <div>
@@ -155,6 +198,7 @@ function handleSubmit() {
             </p>
           </div>
         </div>
+        <!-- Tab 切换栏 -->
         <div class="login-card__tabs">
           <button
             type="button"
@@ -174,6 +218,7 @@ function handleSubmit() {
           </button>
         </div>
 
+        <!-- 登录表单 -->
         <el-form
           v-if="activeTab === 'login'"
           ref="loginFormRef"
@@ -193,6 +238,7 @@ function handleSubmit() {
           </el-button>
         </el-form>
 
+        <!-- 注册表单 -->
         <el-form
           v-else
           ref="registerFormRef"
@@ -218,6 +264,7 @@ function handleSubmit() {
           </el-button>
         </el-form>
 
+        <!-- 底部提示：演示账号 / 用户协议 / 功能说明 -->
         <div class="login-card__footer">
           <p v-if="activeTab === 'login'" class="login-card__hint">
             演示账号：admin / 123456

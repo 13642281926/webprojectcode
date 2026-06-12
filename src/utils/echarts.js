@@ -1,35 +1,70 @@
-/** ECharts 主题配色与基础配置（深色 + 浅色） */
+/**
+ * ECharts 图表构建器
+ *
+ * 基于 ECharts 封装的图表 option 构建函数，提供以下能力：
+ * 1. 深色/浅色双主题配色方案，与 Element Plus 暗色模式同步
+ * 2. 统一的动画配置（动画时长、缓动函数、序列延迟）
+ * 3. 四种常用图表类型的 option 构建函数：折线图、柱状图、热力图、环形图
+ * 4. 日期格式归一化处理（normalizeDate），支撑热力图的日历坐标系
+ *
+ * 设计原则：
+ * - 每个构建函数返回完整的 ECharts option 对象，调用方可直接 setOption
+ * - 所有颜色值和主题样式集中管理，便于统一调整
+ * - 动画参数可全局配置（考核点：动态效果）
+ *
+ * @module utils/echarts
+ */
 
+/** 图表配色色板（6 色，紫-蓝-青-绿-橙-红渐变） */
 export const CHART_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#22c55e', '#f59e0b', '#ef4444']
 
-/** 全局图表动画配置（考核点：动态效果） */
+/**
+ * 全局图表动画配置
+ * 用于提升图表的视觉动态效果（考核点：动态效果）
+ * animationDelay 使用索引函数实现序列动画（每个数据点依次入场）
+ */
 export const chartAnimation = {
   animation: true,
   animationDuration: 1200,
   animationEasing: 'cubicOut',
-  animationDelay: (idx) => idx * 80,
+  animationDelay: (idx) => idx * 80, // 每个数据点延迟 80ms 依次动画
 }
 
-/** 深色模式图表主题 */
+/**
+ * 深色模式图表主题
+ * 文字颜色 #94a3b8（slate-400），适用于暗色背景
+ */
 export const darkChartTheme = {
   backgroundColor: 'transparent',
   textStyle: { color: '#94a3b8' },
   ...chartAnimation,
 }
 
-/** 浅色模式图表主题（Gemini 建议：坐标轴灰色、网格线更淡） */
+/**
+ * 浅色模式图表主题
+ * 文字颜色 #718096（gray-500），坐标轴灰色、网格线更淡，适配浅色背景
+ */
 export const lightChartTheme = {
   backgroundColor: 'transparent',
   textStyle: { color: '#718096' },
   ...chartAnimation,
 }
 
-/** 根据当前模式返回图表主题 */
+/**
+ * 根据当前主题模式返回对应的图表主题配置
+ * @param {boolean} [isDark=true] - 是否为深色模式
+ * @returns {object} ECharts 主题配置对象
+ */
 export function getChartTheme(isDark = true) {
   return isDark ? darkChartTheme : lightChartTheme
 }
 
-/** 获取坐标轴样式（浅色模式下灰色适配） */
+/**
+ * 获取坐标轴样式配置（适配深色/浅色模式）
+ * 包含轴线条、轴标签、分割线的颜色设定
+ * @param {boolean} [isDark=true] - 是否为深色模式
+ * @returns {{axisLine: object, axisLabel: object, splitLine: object}} 坐标轴样式对象
+ */
 export function getAxisStyle(isDark = true) {
   return {
     axisLine: { lineStyle: { color: isDark ? 'rgba(148,163,184,0.3)' : '#d1d5db' } },
@@ -38,7 +73,18 @@ export function getAxisStyle(isDark = true) {
   }
 }
 
-/** 折线图基础 option */
+/**
+ * 构建折线图 option
+ * 包含渐变面积填充、平滑曲线、焦点高亮等交互效果
+ *
+ * @param {object} options - 配置选项
+ * @param {string} [options.title] - 图表标题（可选）
+ * @param {string[]} options.labels - X 轴标签数据
+ * @param {number[]} options.values - Y 轴数值数据
+ * @param {string} [options.seriesName='学习时长'] - 系列名称
+ * @param {boolean} [options.isDark=true] - 是否深色模式
+ * @returns {object} ECharts 折线图 option 对象
+ */
 export function buildLineOption({ title, labels, values, seriesName = '学习时长', isDark = true }) {
   const theme = getChartTheme(isDark)
   const axis = getAxisStyle(isDark)
@@ -83,7 +129,18 @@ export function buildLineOption({ title, labels, values, seriesName = '学习时
   }
 }
 
-/** 柱状图基础 option */
+/**
+ * 构建柱状图 option
+ * 包含渐变色柱体、圆角顶部、焦点高亮等视觉效果
+ *
+ * @param {object} options - 配置选项
+ * @param {string} [options.title] - 图表标题（可选）
+ * @param {string[]} options.labels - X 轴标签数据
+ * @param {number[]} options.values - Y 轴数值数据
+ * @param {string} [options.seriesName='任务数'] - 系列名称
+ * @param {boolean} [options.isDark=true] - 是否深色模式
+ * @returns {object} ECharts 柱状图 option 对象
+ */
 export function buildBarOption({ title, labels, values, seriesName = '任务数', isDark = true }) {
   const theme = getChartTheme(isDark)
   const axis = getAxisStyle(isDark)
@@ -127,7 +184,18 @@ export function buildBarOption({ title, labels, values, seriesName = '任务数'
   }
 }
 
-/** 把各种日期格式归一化为 YYYY-MM-DD（echarts calendar 必需） */
+/**
+ * 将各种日期格式归一化为 YYYY-MM-DD（ECharts calendar 坐标系必需格式）
+ *
+ * 支持的输入格式：
+ * - 数字时间戳（13 位毫秒）
+ * - YYYY-MM-DD、YYYY/MM/DD、YYYY.MM.DD 等分隔符格式
+ * - 中文日期格式（YYYY年MM月DD日）
+ * - ISO 8601 / RFC 2822 等标准日期字符串
+ *
+ * @param {string|number|null} input - 原始日期值
+ * @returns {string} 归一化后的日期字符串（YYYY-MM-DD），无效输入返回空字符串
+ */
 function normalizeDate(input) {
   if (input == null) return ''
   if (typeof input === 'number') {
@@ -155,14 +223,41 @@ function normalizeDate(input) {
   return ''
 }
 
+/**
+ * 补零到两位（如 3 -> '03'）
+ * @param {number|string} n - 数值
+ * @returns {string} 补零后的字符串
+ */
 function pad(n) {
   return String(n).padStart(2, '0')
 }
+
+/**
+ * 将 Date 对象格式化为 YYYY-MM-DD
+ * @param {Date} d - Date 对象
+ * @returns {string} YYYY-MM-DD 格式日期
+ */
 function formatYMD(d) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-/** 学习热力图 option */
+/**
+ * 构建学习热力图 option（日历坐标系）
+ *
+ * 使用 ECharts 的 calendar + heatmap 组合实现类似 GitHub 贡献图的学习热力图。
+ * 自动根据数据最大值决定使用分钟级或数量级色阶。
+ *
+ * 数据处理流程：
+ * 1. 使用 normalizeDate 将所有日期统一为 YYYY-MM-DD
+ * 2. 过滤无效日期项，按日期升序排列
+ * 3. 根据 maxValue 是否 > 5 判断使用分钟级分段色阶或连续色阶
+ *
+ * @param {object} options - 配置选项
+ * @param {Array<[string, number]>} [options.data=[]] - 热力图数据，每项为 [日期, 数值]
+ * @param {string|number} [options.year] - 年份范围，不传时自动根据数据计算
+ * @param {boolean} [options.isDark=true] - 是否深色模式
+ * @returns {object} ECharts 热力图 option 对象
+ */
 export function buildHeatmapOption({ data = [], year, isDark = true }) {
   const theme = getChartTheme(isDark)
   // 归一化日期 + 过滤无效项
@@ -265,7 +360,18 @@ export function buildHeatmapOption({ data = [], year, isDark = true }) {
   }
 }
 
-/** 环形图基础 option */
+/**
+ * 构建环形图 option
+ *
+ * 中空环形布局（内外半径 45%-70%），自动按色板循环分配颜色。
+ * 支持图例（底部居中）、缩放强调、圆角扇区等视觉效果。
+ *
+ * @param {object} options - 配置选项
+ * @param {string} [options.title] - 图表标题（可选）
+ * @param {Array<{name: string, value: number}>} options.data - 环形图数据
+ * @param {boolean} [options.isDark=true] - 是否深色模式
+ * @returns {object} ECharts 环形图 option 对象
+ */
 export function buildPieOption({ title, data, isDark = true }) {
   const theme = getChartTheme(isDark)
   return {

@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * CourseView - 课程中心
+ *
+ * 核心功能：
+ * - 课程卡片网格展示，支持按分类筛选和关键词搜索（400ms 防抖）
+ * - 点击卡片弹出详情抽屉，展示封面、描述、讲师、课时、知识标签、章节时间线
+ * - 管理员（isAdmin）可进行课程 CRUD：创建、编辑、删除
+ * - 课程类别由后端返回，支持动态分类
+ */
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import CourseCard from '@/components/common/CourseCard.vue'
@@ -9,24 +18,38 @@ import { debounce } from '@/utils/debounce'
 import { Search, Collection, Medal, Plus, Edit, Delete } from '@element-plus/icons-vue'
 
 const userStore = useUserStore()
+/** 是否为管理员，控制增删改按钮的显示 */
 const isAdmin = computed(() => userStore.isAdmin)
 
+/** 课程列表加载状态 */
 const loading = ref(false)
+/** 课程列表数据 */
 const courses = ref([])
+/** 课程分类列表（由后端返回） */
 const categories = ref([])
+/** 当前选中的分类筛选值 */
 const category = ref('all')
+/** 搜索关键词 */
 const keyword = ref('')
 
+/** 课程详情抽屉可见性 */
 const drawerVisible = ref(false)
+/** 详情加载状态 */
 const detailLoading = ref(false)
+/** 当前查看的课程详情数据 */
 const courseDetail = ref(null)
 
-// Admin: course form dialog
+/** 管理员：添加/编辑课程对话框 */
 const dialogVisible = ref(false)
+/** 对话框标题（添加课程 / 编辑课程） */
 const dialogTitle = ref('添加课程')
+/** 是否处于编辑模式 */
 const isEditing = ref(false)
+/** 正在编辑的课程 ID */
 const editingId = ref('')
+/** 保存按钮 loading */
 const saving = ref(false)
+/** 课程表单数据，使用 reactive 支持双向绑定 */
 const formData = reactive({
   id: '',
   title: '',
@@ -37,12 +60,14 @@ const formData = reactive({
   lessons: 0,
 })
 
+/** 课程类别选项（管理员创建/编辑时使用） */
 const categoryOptions = [
   { value: 'frontend', label: '前端开发' },
   { value: 'cs', label: '计算机基础' },
   { value: 'language', label: '语言学习' },
 ]
 
+/** 重置表单数据为初始值 */
 function resetForm() {
   formData.id = ''
   formData.title = ''
@@ -53,6 +78,7 @@ function resetForm() {
   formData.lessons = 0
 }
 
+/** 打开创建课程对话框 */
 function openCreateDialog() {
   resetForm()
   isEditing.value = false
@@ -60,6 +86,7 @@ function openCreateDialog() {
   dialogVisible.value = true
 }
 
+/** 打开编辑课程对话框，预填已有数据 */
 function openEditDialog(course) {
   isEditing.value = true
   editingId.value = course.id
@@ -74,6 +101,7 @@ function openEditDialog(course) {
   dialogVisible.value = true
 }
 
+/** 保存课程（创建或更新），根据 isEditing 分发 API */
 async function handleSave() {
   saving.value = true
   try {
@@ -94,6 +122,10 @@ async function handleSave() {
   }
 }
 
+/**
+ * 删除课程
+ * 弹出确认框，用户确认后调用 API 并刷新列表
+ */
 async function handleDelete(course) {
   try {
     await ElMessageBox.confirm(
@@ -111,6 +143,7 @@ async function handleDelete(course) {
   }
 }
 
+/** 从后端拉取课程列表，传入当前分类和关键词筛选 */
 async function fetchList() {
   loading.value = true
   try {
@@ -125,20 +158,27 @@ async function fetchList() {
   }
 }
 
+/** 关键词搜索防抖处理（400ms），减少 API 请求频率 */
 const debouncedSearch = debounce(() => {
   fetchList()
 }, 400)
 
+/** 监听关键词变化，触发防抖搜索 */
 watch(keyword, () => {
   debouncedSearch()
 })
 
+/** 监听分类变化，立即刷新列表 */
 watch(category, () => {
   fetchList()
 })
 
 onMounted(fetchList)
 
+/**
+ * 打开课程详情抽屉
+ * 先显示 loading 占位，异步加载详情数据
+ */
 async function openDetail(course) {
   drawerVisible.value = true
   detailLoading.value = true
@@ -154,7 +194,7 @@ async function openDetail(course) {
 
 <template>
   <div class="page-container course-page">
-    <!-- 页面标题区域 -->
+    <!-- 页面标题区域：课程中心概览 + 管理员操作按钮 -->
     <div class="page-hero">
       <div class="page-hero__content">
         <div class="page-badge">
@@ -175,7 +215,7 @@ async function openDetail(course) {
       </div>
     </div>
 
-    <!-- 筛选区域 -->
+    <!-- 筛选区域：分类单选 + 关键词搜索 -->
     <div class="filter-panel">
       <div class="filter-panel__grow">
         <el-radio-group v-model="category" size="default" class="category-radio-group">
@@ -188,16 +228,16 @@ async function openDetail(course) {
           </el-radio-button>
         </el-radio-group>
       </div>
-      <el-input 
-        v-model="keyword" 
-        clearable 
-        placeholder="搜索课程名称/讲师" 
+      <el-input
+        v-model="keyword"
+        clearable
+        placeholder="搜索课程名称/讲师"
         style="width: 260px"
         :prefix-icon="Search"
       />
     </div>
 
-    <!-- 课程卡片网格 -->
+    <!-- 课程卡片网格 + 管理员浮层按钮 -->
     <div v-loading="loading" class="content-grid">
       <div v-for="course in courses" :key="course.id" class="course-card-wrapper">
         <CourseCard
@@ -205,6 +245,7 @@ async function openDetail(course) {
           class="course-page__card"
           @click="openDetail(course)"
         />
+        <!-- 管理员悬停时显示的编辑/删除按钮 -->
         <div v-if="isAdmin" class="course-card-admin">
           <el-button size="small" type="primary" :icon="Edit" circle @click.stop="openEditDialog(course)" />
           <el-button size="small" type="danger" :icon="Delete" circle @click.stop="handleDelete(course)" />
@@ -222,17 +263,20 @@ async function openDetail(course) {
       </template>
       <div v-loading="detailLoading" class="course-detail">
         <template v-if="courseDetail">
+          <!-- 课程封面图 -->
           <LazyImage :src="courseDetail.cover" :alt="courseDetail.title" class="course-detail__cover" />
           <h3 class="course-detail__title">{{ courseDetail.title }}</h3>
           <p class="course-detail__desc">{{ courseDetail.description }}</p>
           <p class="course-detail__meta">
             讲师：{{ courseDetail.teacher }} · {{ courseDetail.lessons }} 课时
           </p>
+          <!-- 知识标签 -->
           <div v-if="courseDetail.knowledgePoints?.filter(Boolean).length" class="course-detail__tags">
             <el-tag v-for="kp in courseDetail.knowledgePoints.filter(Boolean)" :key="kp" size="default" effect="plain" type="info">
               {{ kp }}
             </el-tag>
           </div>
+          <!-- 学习进度条 -->
           <div class="course-detail__progress">
             <span class="progress-label">学习进度</span>
             <span class="progress-value">{{ courseDetail.progress }}%</span>
@@ -248,6 +292,7 @@ async function openDetail(course) {
           <el-divider content-position="left">
             <span class="divider-title">章节列表</span>
           </el-divider>
+          <!-- 已完成/待学习图例 -->
           <div class="course-detail__legend">
             <span class="legend-item">
               <span class="course-detail__dot course-detail__dot--done"></span>
@@ -258,6 +303,7 @@ async function openDetail(course) {
               待学习
             </span>
           </div>
+          <!-- 章节时间线 -->
           <div class="chapters-container">
             <el-timeline>
               <el-timeline-item

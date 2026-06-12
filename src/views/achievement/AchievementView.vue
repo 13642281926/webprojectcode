@@ -1,4 +1,17 @@
 <script setup>
+/**
+ * AchievementView - 成就殿堂 / 荣誉系统
+ *
+ * 核心功能：
+ * - 汇集多维度学习数据（笔记数、错题数、计划数、资源数、番茄分钟……）
+ * - 通过 achievementStore.evaluate() 实时评估成就解锁状态
+ * - 成就按分类（成长/学习/任务/创作）和状态（已解锁/未解锁）筛选
+ * - 稀有度系统：普通/稀有/珍贵/史诗/传说，不同样式渲染
+ * - 仪表盘：荣誉积分、解锁进度百分比环、连续学习天数、最高连击
+ * - 最近解锁列表 + 成长建议
+ * - 监听各 store 数据变化自动重算成就状态
+ * - 成就一旦解锁永久点亮，无法重置
+ */
 import { ref, computed, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAchievementStore } from '@/stores/achievement'
@@ -25,25 +38,35 @@ const noteStore = useNoteStore()
 const wrongStore = useWrongQuestionStore()
 const planStore = useStudyPlanStore()
 
+/** 筛选条件：成就分类 / 解锁状态 */
 const filterCategory = ref('')
 const filterStatus = ref('')
 
-// 汇总外部学习数据
+/**
+ * 从各个 store 收集当前学习指标数据
+ * 番茄：专注分钟、完成数、连续打卡天数
+ * 笔记：笔记总数
+ * 错题：总数、已掌握数
+ * 计划：总数、已完成数（优先 store，兜底 localStorage）
+ * 资源：从 localStorage 读取（无独立 store）
+ * @returns {Object} 汇总指标对象，供 evaluate() 评估成就
+ */
 function collectMetrics() {
+  // 累计专注分钟（仅已完成轮次）
   const focusMinutes = pomodoroStore.logs
     .filter((l) => l.completed)
     .reduce((sum, l) => sum + Math.round(l.durationSec / 60), 0)
   const completedPomodoros = pomodoroStore.logs.filter((l) => l.completed).length
   const streakDays = pomodoroStore.streakDays
 
-  // 计划/资源从 localStorage 兜底读取（store 自身有数据就优先 store）
+  // 计划：优先使用 store，数据为空时降级到 localStorage
   const planList = (planStore.plans && planStore.plans.length)
     ? planStore.plans
     : (getStorage('ai-learning-plans', []) || [])
   const completedPlans = planList.filter((p) => p.status === 'completed' || p.completed).length
   const plans = planList.length
 
-  // 资源没有专门的 store，从 localStorage 读取
+  // 资源：从 localStorage 读取（项目无独立 resource store）
   const resources = (getStorage('ai-learning-resources', []) || []).length
 
   return {
@@ -59,6 +82,12 @@ function collectMetrics() {
   }
 }
 
+/**
+ * 刷新成就评估
+ * 1. 收集当前各项学习指标
+ * 2. 调用 achievementStore.evaluate() 计算每个成就的当前进度
+ * 3. 将 streakDays 透传给 stats 面板
+ */
 function refresh() {
   const metrics = collectMetrics()
   const list = achievementStore.evaluate(metrics)
@@ -67,9 +96,14 @@ function refresh() {
   achievementStore.setAchievements(list)
 }
 
+/** 从 store 映射的成就与统计 */
 const achievements = computed(() => achievementStore.achievements)
 const stats = computed(() => achievementStore.stats)
 
+/**
+ * 筛选后的成就列表
+ * 排序规则：已解锁优先 > 未解锁，同状态按进度降序
+ */
 const filteredAchievements = computed(() => {
   let list = [...achievements.value]
   if (filterCategory.value) list = list.filter((a) => a.category === filterCategory.value)
@@ -81,12 +115,14 @@ const filteredAchievements = computed(() => {
   })
 })
 
+/** 成就解锁百分比（已解锁数 / 总数） */
 const unlockRate = computed(() => {
   const total = achievements.value.length
   if (!total) return 0
   return Math.round((achievements.value.filter((a) => a.unlocked).length / total) * 100)
 })
 
+/** 仪表盘摘要卡片数据 */
 const summaryCards = computed(() => [
   { label: '荣誉积分', value: stats.value?.totalPoints || 0, unit: 'pts', icon: StarFilled },
   { label: '解锁进度', value: `${stats.value?.unlockedCount || 0}/${stats.value?.total || 0}`, unit: '', icon: Trophy },
@@ -94,6 +130,7 @@ const summaryCards = computed(() => [
   { label: '最高连击', value: stats.value?.longestStreak || 0, unit: '天', icon: Medal },
 ])
 
+/** 最近解锁的成就列表（含格式化时间） */
 const recentUnlocked = computed(() =>
   (stats.value?.recentUnlocked || []).map((item) => ({
     ...item,
@@ -101,16 +138,18 @@ const recentUnlocked = computed(() =>
   })),
 )
 
+/** 环形进度条样式：conic-gradient 实现圆弧显示解锁百分比 */
 const ringStyle = computed(() => ({
   background: `conic-gradient(#22c55e 0deg, #6366f1 ${unlockRate.value * 3.6}deg, rgba(255, 255, 255, 0.08) 0deg)`,
 }))
 
+/** 下一个即将解锁的成就（未解锁 + 有目标值） */
 const nextUnlockAchievement = computed(() =>
   filteredAchievements.value.find((a) => !a.unlocked && a.target > 0),
 )
 
+/** 页面挂载：并行拉取各 store 数据，完成后触发初次成就评估 */
 onMounted(async () => {
-  // 拉取各 store 数据以收集指标
   await Promise.all([
     noteStore.fetchNotes().catch(() => null),
     wrongStore.fetchWrongQuestions().catch(() => null),
@@ -119,7 +158,10 @@ onMounted(async () => {
   refresh()
 })
 
-// 监听数据源变化自动重算
+/**
+ * 监听数据源变化自动重算
+ * 当番茄日志数、笔记数、错题数或已掌握数变化时触发
+ */
 watch(
   () => [
     pomodoroStore.logs.length,
@@ -130,6 +172,7 @@ watch(
   () => refresh(),
 )
 
+/** 点击成就卡片：已解锁提示成功，未解锁提示进度差 */
 const handleAchievementClick = (achievement) => {
   if (achievement.unlocked) {
     ElMessage.success(`成就「${achievement.title}」已解锁`)
@@ -138,19 +181,26 @@ const handleAchievementClick = (achievement) => {
   }
 }
 
+// ==================== 工具函数 ====================
+
+/** 稀有度 -> Element Plus tag type 映射 */
 const getRarityType = (rarity) => {
   const map = { common: 'info', uncommon: 'success', rare: 'primary', epic: 'warning', legendary: 'danger' }
   return map[rarity] || 'info'
 }
+/** 稀有度 -> 中文文本映射 */
 const getRarityText = (rarity) => {
   const map = { common: '普通', uncommon: '稀有', rare: '珍贵', epic: '史诗', legendary: '传说' }
   return map[rarity] || '普通'
 }
+/** 图标名称 -> Element Plus 图标组件映射 */
 const getIconComponent = (iconName) => {
   const iconMap = { Timer, Document, CircleCheck, List, Trophy, Warning, Folder }
   return iconMap[iconName] || Trophy
 }
+/** 获取成就进度百分比，避免 undefined */
 const getProgressPercentage = (achievement) => achievement.progressPercent || 0
+/** 格式化日期时间为 "MM/DD HH:MM" 中文格式 */
 const formatDateTime = (value) => {
   if (!value) return '待解锁'
   const date = new Date(value)
@@ -161,6 +211,7 @@ const formatDateTime = (value) => {
 
 <template>
   <div class="page-container achievement-page">
+    <!-- 顶部 Hero 区域：荣誉殿堂介绍 + 进度环 + 下一枚徽章预览 -->
     <section class="achievement-hero glass-card">
       <div class="achievement-hero__content">
         <div class="achievement-hero__badge">
@@ -172,12 +223,14 @@ const formatDateTime = (value) => {
           成就会根据学习天数、笔记、错题、番茄和资源沉淀自动解锁，达成即永久点亮，无法重置。
         </p>
         <div class="achievement-hero__actions">
+          <!-- 解锁百分比 -->
           <div class="achievement-hero__progress">
             <span>荣誉完成度</span>
             <strong>{{ unlockRate }}%</strong>
           </div>
         </div>
       </div>
+      <!-- 环形进度指示器 + 下一枚徽章 -->
       <div class="achievement-hero__panel">
         <div class="achievement-hero__ring" :style="ringStyle">
           <span>{{ unlockRate }}%</span>
@@ -192,6 +245,7 @@ const formatDateTime = (value) => {
       </div>
     </section>
 
+    <!-- 摘要卡片：荣誉积分 / 解锁进度 / 连续学习 / 最高连击 -->
     <section class="summary-grid">
       <article v-for="card in summaryCards" :key="card.label" class="summary-card glass-card hover-lift">
         <div class="summary-card__icon">
@@ -207,13 +261,16 @@ const formatDateTime = (value) => {
       </article>
     </section>
 
+    <!-- 主区域：左侧成就面板 + 右侧最近解锁 / 成长建议 -->
     <section class="achievement-main">
+      <!-- 全部成就面板 -->
       <div class="achievement-board glass-card">
         <div class="section-head">
           <div>
             <div class="section-head__eyebrow">Achievement Board</div>
             <h3 class="section-title">全部成就</h3>
           </div>
+          <!-- 筛选按钮：分类 + 状态 -->
           <div class="filter-tabs">
             <el-radio-group v-model="filterCategory" size="small">
               <el-radio-button label="">全部</el-radio-button>
@@ -230,6 +287,7 @@ const formatDateTime = (value) => {
           </div>
         </div>
 
+        <!-- 成就卡片网格 -->
         <div class="achievements-grid">
           <div
             v-for="achievement in filteredAchievements"
@@ -238,13 +296,16 @@ const formatDateTime = (value) => {
             :class="{ locked: !achievement.unlocked, [`rarity-${achievement.rarity}`]: achievement.rarity }"
             @click="handleAchievementClick(achievement)"
           >
+            <!-- 光照装饰 -->
             <div class="achievement-card__glow" />
+            <!-- 成就图标 -->
             <div class="achievement-icon">
               <el-icon :size="34"><component :is="getIconComponent(achievement.icon)" /></el-icon>
             </div>
             <div class="achievement-info">
               <div class="achievement-top">
                 <div class="achievement-name">{{ achievement.title }}</div>
+                <!-- 稀有度标签 -->
                 <el-tag :type="getRarityType(achievement.rarity)" size="small" effect="dark">
                   {{ getRarityText(achievement.rarity) }}
                 </el-tag>
@@ -254,6 +315,7 @@ const formatDateTime = (value) => {
                 <span class="achievement-points">+{{ achievement.points }} 积分</span>
                 <span class="achievement-category">{{ achievement.category }}</span>
               </div>
+              <!-- 进度条 + 当前进度/目标 -->
               <div class="achievement-progress">
                 <el-progress
                   :percentage="getProgressPercentage(achievement)"
@@ -274,7 +336,9 @@ const formatDateTime = (value) => {
         </div>
       </div>
 
+      <!-- 侧边栏：最近解锁 + 成长建议 -->
       <aside class="achievement-side">
+        <!-- 最近解锁列表 -->
         <div class="achievement-side__panel glass-card">
           <div class="section-head">
             <div>
@@ -297,6 +361,7 @@ const formatDateTime = (value) => {
           <el-empty v-else description="继续完成任务，这里会展示你的新勋章" />
         </div>
 
+        <!-- 成长建议 -->
         <div class="achievement-side__panel glass-card">
           <div class="section-head">
             <div>
@@ -307,7 +372,7 @@ const formatDateTime = (value) => {
           <div class="tips-list">
             <div class="tip-item">
               <el-icon><Document /></el-icon>
-              <span>持续整理学习笔记，最快推进“笔记达人”。</span>
+              <span>持续整理学习笔记，最快推进"笔记达人"。</span>
             </div>
             <div class="tip-item">
               <el-icon><Warning /></el-icon>
